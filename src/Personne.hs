@@ -35,11 +35,10 @@ courriel (Personne c _)= c
 -- >>> map courrielValide ["tatoooange@smail.ca", "ange.tato@smail.ca", "ange_tato@smail.ca", "Tato@smail.ca"]
 -- [True,True,True,False]
 courrielValide :: [Char] -> Bool
---courrielValide = error "à acompléter"
--- courrielValide xs = if not '@'  `elem` xs then return False
 courrielValide xs
                 | '@' `notElem`  xs = False
                 | domain /= "@smail.ca" = False
+                | not( checkName name ) = False 
                 | otherwise = True
                 where (name, domain) = splitByIndex '@' xs
 
@@ -51,25 +50,23 @@ getIndexOf x xs = fromJust $ elemIndex x xs
 splitByIndex:: Eq a =>  a -> [a]-> ([a], [a])
 splitByIndex x xs = splitAt (getIndexOf x xs) xs
 
--- takes a name and a list of allowed chars, 
--- Compare each char of name to allowed chars
---heckName:: Eq a => [a] -> [a]-> Bool
-checkName [] = False
-checkName (x:xs1) 
-    | elem x numbers = True 
-    | elem x caracters && isLower x = True 
-    | otherwise = False 
-    where numbers = getDigits xs1
-          caracters = getCaracters xs1
-
 
 getDigits :: [Char] -> [Char ]
 getDigits [] = []
 getDigits xs = filter isDigit xs
 
-getCaracters:: [Char ] -> [Char ]
-getCaracters [] = []
-getCaracters (x:xs)
-    | isDigit x =  getCaracters xs
-    | otherwise = x : getCaracters xs
+-- Get caracters from name except allowed caracters which are in list ['_', '-', '.']
+getCaracters:: [Char] -> [Char] -> [Char]
+getCaracters [] [] = []
+getCaracters (x:xs) xs2
+    | isDigit x = getCaracters xs xs2
+    | x `elem` xs2 = getCaracters xs xs2
+    | otherwise = x : getCaracters xs xs2
 
+
+checkName:: [Char] -> Bool
+checkName [] = False
+checkName xs 
+    | False `elem` map isAsciiLower caracters = False 
+    | otherwise = True 
+    where caracters = getCaracters xs ['_', '-', '.']
