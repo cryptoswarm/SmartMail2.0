@@ -28,4 +28,10 @@ courriel (Personne c _)= c
 -- >>> map courrielValide ["tatoooange@smail.ca", "ange.tato@smail.ca", "ange_tato@smail.ca", "Tato@smail.ca"]
 -- [True,True,True,False]
 courrielValide :: [Char] -> Bool
-courrielValide = error "à acompléter"
+courrielValide [] = False     
+courrielValide xs = ((length ( filter (\x-> x =='.'||
+                     x=='-'|| x == '_' || (x>='0' && x<='9')||
+                     (x>='a' && x<='z') )  xs)) ==  length xs -1) &&
+                     ((snd $ span (/= '@') xs) == "@smail.ca")
+   
+

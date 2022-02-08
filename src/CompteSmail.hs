@@ -10,6 +10,10 @@ Ce module offre les fonctionalités permettant de manipuler les comptes SmartMai
  -}
 module CompteSmail where 
 
+
+import Prelude
+
+
 import Personne
 import Trame
 type Contact = (Personne, Etat)
@@ -53,6 +57,12 @@ preferences (CompteSmail _ _ _ _ pr _) = pr
 contacts :: CompteSmail  -> [Contact] 
 contacts (CompteSmail _ _ _ _ _ c) = c 
 
+instance Show CompteSmail where
+      show (CompteSmail (Personne cu _) o1 o2 o3 _ element )=  "CompteSmail " ++ show cu++":"  ++ 
+                                                        "\nRecus = " ++ show o1 ++"," ++ 
+                                                       "\nEnvois = " ++ show o2++","  ++ 
+                                                       "\nSpams = " ++ show o3++","  ++ 
+                                                       "\nContacts = "  ++ show (listeContacts element)
 
 -------------------------------------------------------------------
 --------------------------NE PAS MODIFIER--------------------------
@@ -130,9 +140,20 @@ csmail24 = CompteSmail pers13  [] [] [] [] []
 -- Recus = [],
 -- Envois = [],
 -- Spams = [],
--- Contacts = [("robert.julien@smail.ca",Blanc),("tato.ange@smail.ca",Blanc)]
+
+
 ajouterContact :: Courriel -> Prenom -> Nom -> CompteSmail -> CompteSmail 
-ajouterContact  = error " à compléter"
+ajouterContact a b c d = if (elem a ((map (Personne.courriel) (map fst (contacts d) )))) then
+                             d 
+                         else 
+                             (CompteSmail (personne d) (reception d)
+                             (envoi d) (spams d) (preferences d)                             
+                             ((Personne a  (b,c), Blanc):(contacts d))
+                             ) 
+
+ 
+
+
 
 
 
