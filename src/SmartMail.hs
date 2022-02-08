@@ -19,6 +19,7 @@ first_third (f,_,t) = (f,t) -- Petite fonction utilisée dans les tests
 emptySmartMail :: SmartMail 
 emptySmartMail = error " à compléter"
 
+-- emptySmartMail  = Map.empty
 
 -- | Ajout d'un compteSmail 
 --
