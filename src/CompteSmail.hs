@@ -1,3 +1,4 @@
+{-# LANGUAGE BlockArguments #-}
 {-|
 Module      : CompteSmail
 Description : Module pour la gestion des comptes de la messagerie SmartMail
@@ -13,6 +14,7 @@ module CompteSmail where
 import Personne
 import Trame
 import Data.Maybe (fromJust)
+import Data.List (elemIndex)
 type Contact = (Personne, Etat)
 type Explications = String
 data Etat = Noir | Blanc deriving (Show, Eq, Read) -- Noir = contact dans liste noire (bloqué) , Blanc contact non bloqué
@@ -176,9 +178,40 @@ ajouterContact' c p n compte = CompteSmail (personne compte)
 -- Envois = [],
 -- Spams = [],
 -- Contacts = [("robert.julien@smail.ca",Blanc),("bourassa.alex@smail.ca",Noir),("tato.ange@smail.ca",Blanc)]
-bloquerContact :: CompteSmail -> Personne -> CompteSmail
-bloquerContact = error " à compléter"
+-- bloquerContact :: CompteSmail -> Personne -> CompteSmail
+-- --bloquerContact = error " à compléter"
+-- bloquerContact compte p = do
+--                               result <- trouverContact ( courriel p ) ( contacts compte )
+--                           case result of 
+--                               Just contact -> CompteSmail (personne compte)
+--                                           (reception compte) (envoi compte) (spams compte)
+--                                           (preferences compte) ( bloquerContact'( splitListContact (contacts compte)))
+--                               Nothing -> compte
+--pers5 = Personne "bourassa.alex@smail.ca" ("alex","bourassa")
+-- | contact = (trouverContact ( courriel p ) ( contacts compte )) == Nothing = compte
+-- | otherwise = compte
 
+
+bloquerContact :: CompteSmail -> Personne -> CompteSmail
+bloquerContact compte p 
+                      | trouverContact ( courriel p ) ( contacts compte ) == Nothing = compte
+                      | otherwise = CompteSmail (personne compte)
+                                    (reception compte) (envoi compte) (spams compte)
+                                    (preferences compte) ( bloquerContact'( splitListContact (p, Blanc) (contacts compte)))
+
+
+
+splitListContact::  Contact -> [Contact] -> ([Contact],[Contact])
+splitListContact c xs = splitAt (fromJust $ elemIndex c xs) xs
+
+
+bloquerContact':: ([Contact],[Contact]) -> [Contact]
+bloquerContact' (x, y) = x ++ (fst $ head y,  Noir) : tail y 
+
+
+
+-- bloquerContact' :: CompteSmail -> Personne -> CompteSmail
+-- bloquerContact' compte p 
 
 -- | Supprimer messages de la boîte de reception, d'envoi ou de spams d'un compte en fonction d'un filtre.
 -- Tous les messages passant le filtre doivent être supprimés de la boîte spécifié.
