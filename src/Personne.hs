@@ -5,6 +5,7 @@ module Personne where
 
 import Data.Maybe (fromJust)
 import Data.List (elemIndex)
+--import Text.Regex.Posix
 import Data.Char
 
 type Nom = String
@@ -55,13 +56,13 @@ getDigits :: [Char] -> [Char ]
 getDigits [] = []
 getDigits xs = filter isDigit xs
 
--- Get caracters from name except allowed caracters which are in list ['_', '-', '.']
-getCaracters:: [Char] -> [Char] -> [Char]
-getCaracters [] [] = []
-getCaracters (x:xs) xs2
-    | isDigit x = getCaracters xs xs2
-    | x `elem` xs2 = getCaracters xs xs2
-    | otherwise = x : getCaracters xs xs2
+-- Get caracters from name except allowed caracters which are in list ['_', '-',]
+getCaracters:: [Char ] -> [Char ]
+getCaracters [] = []
+getCaracters (x:xs)
+    | isDigit x =  getCaracters xs
+    | x == '-' || x == '_' || x == '.' = getCaracters xs
+    | otherwise = x : getCaracters xs
 
 
 checkName:: [Char] -> Bool
@@ -69,4 +70,17 @@ checkName [] = False
 checkName xs 
     | False `elem` map isAsciiLower caracters = False 
     | otherwise = True 
-    where caracters = getCaracters xs ['_', '-', '.']
+    where caracters = getCaracters xs
+
+
+person = Personne "email@smail.ca" ("mokhtar", "safir")
+
+
+
+
+
+-- function :: String -> String
+-- function arg
+--   | arg =~ "pattern1" = "1"
+--   | arg =~ "pattern2" = "2"
+--   | otherwise = "3"
