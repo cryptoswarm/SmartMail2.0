@@ -15,6 +15,8 @@ import Personne
 import Trame
 import Data.Maybe (fromJust)
 import Data.List (elemIndex)
+import Data.Char
+
 type Contact = (Personne, Etat)
 type Explications = String
 data Etat = Noir | Blanc deriving (Show, Eq, Read) -- Noir = contact dans liste noire (bloqué) , Blanc contact non bloqué
@@ -178,19 +180,6 @@ ajouterContact' c p n compte = CompteSmail (personne compte)
 -- Envois = [],
 -- Spams = [],
 -- Contacts = [("robert.julien@smail.ca",Blanc),("bourassa.alex@smail.ca",Noir),("tato.ange@smail.ca",Blanc)]
--- bloquerContact :: CompteSmail -> Personne -> CompteSmail
--- --bloquerContact = error " à compléter"
--- bloquerContact compte p = do
---                               result <- trouverContact ( courriel p ) ( contacts compte )
---                           case result of 
---                               Just contact -> CompteSmail (personne compte)
---                                           (reception compte) (envoi compte) (spams compte)
---                                           (preferences compte) ( bloquerContact'( splitListContact (contacts compte)))
---                               Nothing -> compte
---pers5 = Personne "bourassa.alex@smail.ca" ("alex","bourassa")
--- | contact = (trouverContact ( courriel p ) ( contacts compte )) == Nothing = compte
--- | otherwise = compte
-
 
 bloquerContact :: CompteSmail -> Personne -> CompteSmail
 bloquerContact compte p 
@@ -209,10 +198,6 @@ bloquerContact':: ([Contact],[Contact]) -> [Contact]
 bloquerContact' (x, y) = x ++ (fst $ head y,  Noir) : tail y 
 
 
-
--- bloquerContact' :: CompteSmail -> Personne -> CompteSmail
--- bloquerContact' compte p 
-
 -- | Supprimer messages de la boîte de reception, d'envoi ou de spams d'un compte en fonction d'un filtre.
 -- Tous les messages passant le filtre doivent être supprimés de la boîte spécifié.
 -- Les paramètres : Le compte à vider, le type de la boîte : Spams, Envoi ou Reception, un filtre, le comptre modifié
@@ -230,27 +215,25 @@ bloquerContact' (x, y) = x ++ (fst $ head y,  Noir) : tail y
 -- Contacts = [("bourassa.alex@smail.ca",Blanc),("robert.julien@smail.ca",Blanc)]
 
 supprimerMessagesAvecFiltre :: CompteSmail  -> String ->(Trame -> Bool)-> CompteSmail
-supprimerMessagesAvecFiltre = error " à compléter"
-
-{-
-CompteSmail "noel.alice@smail.ca" :
-Recus = [],
-Envois = [],
-Spams = [],
-Contacts = [("robert.julien@smail.ca",Blanc)]
--}
-
-compteSmail = CompteSmail
-                pers0
-                [trame1]
-                [trame11]
-                [(trame15, "spam15")]
-                []
-                [(pers10, Blanc)]
-
-
--- instance Show Prediction where
---   show (Prediction a b c) = show a ++ "-" ++ show b ++ "-" ++ show c
+supprimerMessagesAvecFiltre compte boite f
+                          | boite == "Reception" =  CompteSmail (personne compte)
+                                    (dropWhile f (reception compte)) (envoi compte) (spams compte)
+                                    (preferences compte) (contacts compte)
+                          | boite == "Envoi" = CompteSmail (personne compte)
+                                    (reception compte) (dropWhile f (envoi compte)) (spams compte)
+                                    (preferences compte) (contacts compte)
+                                    
+                          | boite == "Spams" = CompteSmail (personne compte)
+                                    (reception compte) (envoi compte) (deleteFromTuple f (spams compte))
+                                    (preferences compte) (contacts compte)
+                                    
+                          | otherwise = compte 
+                        
+deleteFromTuple :: (Trame -> Bool ) -> [(Trame, Explications)] -> Spams
+deleteFromTuple f ((t, e): xs)
+                             | map f [t] == [True] = xs 
+                             | otherwise = (t, e) :  deleteFromTuple f xs
+ 
 instance Show CompteSmail where
   show (CompteSmail person  reception send spam prefrences contacts) =
       "CompteSmail" ++ " " ++ show ( courriel person ) ++ ":" ++ "\n"
