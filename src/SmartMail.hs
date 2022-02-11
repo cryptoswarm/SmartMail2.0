@@ -1,4 +1,4 @@
-module SmartMail where 
+module SmartMail where
 
 import qualified Data.Map as Map
 import Data.Maybe
@@ -9,6 +9,7 @@ import Trame
 import CompteSmail
 import System.Directory
 
+
 type SmartMail = Map.Map Courriel CompteSmail -- Dictionnaire de comptes smail
 first_third (f,_,t) = (f,t) -- Petite fonction utilisée dans les tests
 
@@ -16,8 +17,8 @@ first_third (f,_,t) = (f,t) -- Petite fonction utilisée dans les tests
 --
 -- >>> nombreCompteSmail emptySmartMail
 -- 0
-emptySmartMail :: SmartMail 
-emptySmartMail = error " à compléter"
+emptySmartMail :: SmartMail
+emptySmartMail = Map.fromList []
 
 
 -- | Ajout d'un compteSmail 
@@ -28,14 +29,17 @@ emptySmartMail = error " à compléter"
 -- >>> courrielsComptes s1
 -- ["nkambou.roger@smail.ca","tato.ange@smail.ca"]
 ajoutCompte :: CompteSmail -> SmartMail-> SmartMail
-ajoutCompte = error " à compléter"
+ajoutCompte compte dict
+                      | Map.member ( courriel ( personne compte ) ) dict = dict
+                      | otherwise = Map.insert (courriel ( personne compte )) compte dict
 
 -- | Ajout de plusieurs comptes Smail 
 --
 -- >>> courrielsComptes $ ajoutComptes [csmail1, csmail2] emptySmartMail
 -- ["nkambou.roger@smail.ca","tato.ange@smail.ca"]
-ajoutComptes::  [CompteSmail] -> SmartMail -> SmartMail 
+ajoutComptes::  [CompteSmail] -> SmartMail -> SmartMail
 ajoutComptes = error " à compléter"
+--ajoutComptes (x:xs) sMail = head( (ajoutCompte x sMail) : ajoutComptes xs sMail )
 
 -- | Affiche tous les courriels de comptes Smail
 --
@@ -45,7 +49,7 @@ ajoutComptes = error " à compléter"
 -- >>>courrielsComptes emptySmartMail
 -- []
 courrielsComptes ::SmartMail-> [Courriel]
-courrielsComptes = error " à compléter"
+courrielsComptes = Map.keys
 
 -- | Retourne nombre de CompteSmail contenu dans SmartMail
 --
@@ -55,7 +59,7 @@ courrielsComptes = error " à compléter"
 -- >>> nombreCompteSmail emptySmartMail
 -- 0
 nombreCompteSmail :: SmartMail -> Int
-nombreCompteSmail = error " à compléter"
+nombreCompteSmail = Map.size
 
 -- | Retoune le comptre Smail associé à un courriel dans SmartMail
 -- Note : On suppose que le courriel passé en argumemnt est associé à un compte existant du smartmail
@@ -68,7 +72,8 @@ nombreCompteSmail = error " à compléter"
 -- Spams = [],
 -- Contacts = [("nkambou.roger@smail.ca",Blanc),("noel.alice@smail.ca",Noir)]
 obtenirCompte :: Courriel -> SmartMail -> CompteSmail
-obtenirCompte = error " à compléter"
+obtenirCompte c sMail = fromJust $ Map.lookup c sMail
+                     
 
 -- | Déterminer la priorité d'un message non spam, pour chacune des personnes dans les listes receveurs, cc et cci
 -- Note: on suppose que le message est un message non spam.
@@ -126,7 +131,7 @@ prioritesMessage = error " à compléter"
 -- >>> filtrageEnveloppe trame17 s1 "adam.ronelle@smail.ca"
 -- (NonSpam,Trame (Entete (Date 2022 2 14) "Je suis le prince de Namek" (Personne "satan.peticoeur@smail.ca" ("Satan","Peticoeur")) [Personne "tato.ange@smail.ca" ("ange","tato")] [Personne "adam.ronelle@smail.ca" ("Adam","Ronelle")] [Personne "gabrielle.joyce@smail.ca" ("Gabrielle","Joyce"),Personne "marsu.pilami@smail.ca" ("Marsu","Pilami")]) "Je suis satan petit coeur et je viens de la planete Namek.","")
 
-filtrageEnveloppe :: Trame -> SmartMail -> Courriel -> (TypeMessage, Trame, Explications) 
+filtrageEnveloppe :: Trame -> SmartMail -> Courriel -> (TypeMessage, Trame, Explications)
 filtrageEnveloppe = error " à compléter"
 
 
