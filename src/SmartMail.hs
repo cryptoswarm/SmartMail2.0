@@ -18,7 +18,12 @@ first_third (f,_,t) = (f,t) -- Petite fonction utilisée dans les tests
 -- >>> nombreCompteSmail emptySmartMail
 -- 0
 emptySmartMail :: SmartMail 
+<<<<<<< HEAD
 emptySmartMail = Map.empty
+=======
+emptySmartMail = error " à compléter"
+
+>>>>>>> 63ee9860d10eef85c14ea63bb108bf7da33f27ce
 
 -- | Ajout d'un compteSmail 
 --

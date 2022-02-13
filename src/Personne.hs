@@ -34,3 +34,4 @@ courrielValide xs = ((length ( filter (\x-> x =='.'||
                      (x>='a' && x<='z') )  xs)) ==  length xs -1) &&
                      ((snd $ span (/= '@') xs) == "@smail.ca")
    
+
