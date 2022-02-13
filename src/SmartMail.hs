@@ -29,6 +29,7 @@ emptySmartMail = Map.fromList []
 -- >>> courrielsComptes s1
 -- ["nkambou.roger@smail.ca","tato.ange@smail.ca"]
 ajoutCompte :: CompteSmail -> SmartMail-> SmartMail
+--ajoutCompte _ dict = error "Vous devez fournir un compteSmail"
 ajoutCompte compte dict
                       | Map.member ( courriel ( personne compte ) ) dict = dict
                       | otherwise = Map.insert (courriel ( personne compte )) compte dict
@@ -38,8 +39,8 @@ ajoutCompte compte dict
 -- >>> courrielsComptes $ ajoutComptes [csmail1, csmail2] emptySmartMail
 -- ["nkambou.roger@smail.ca","tato.ange@smail.ca"]
 ajoutComptes::  [CompteSmail] -> SmartMail -> SmartMail
-ajoutComptes = error " à compléter"
---ajoutComptes (x:xs) sMail = head( (ajoutCompte x sMail) : ajoutComptes xs sMail )
+-- ajoutComptes xs sMail = foldl (flip ajoutCompte) sMail xs
+ajoutComptes xs sMail = foldl (\sMail x  -> ajoutCompte x sMail) sMail xs
 
 -- | Affiche tous les courriels de comptes Smail
 --
@@ -73,13 +74,19 @@ nombreCompteSmail = Map.size
 -- Contacts = [("nkambou.roger@smail.ca",Blanc),("noel.alice@smail.ca",Noir)]
 obtenirCompte :: Courriel -> SmartMail -> CompteSmail
 obtenirCompte c sMail = fromJust $ Map.lookup c sMail
-                     
+
 
 -- | Déterminer la priorité d'un message non spam, pour chacune des personnes dans les listes receveurs, cc et cci
 -- Note: on suppose que le message est un message non spam.
--- Cette fonction retourne une liste de priorité correspondant à chacun des receveurs, les personnes en Cc et en Cci.
---    (1) Important= expediteur est un contact direct (est dans la liste de contacts du recepteur) qui n'est pas bloqué ou est "equipesmartmail@smail.ca" 
---    (2) Normal = expediteur est de niveau 2 (est dans la liste de contacts d'au moins un des contacts du recepteur et n'est pas bloqué). Si il est bloqué par au moins un contact, alors il passe au niveau suivant.
+-- Cette fonction retourne une liste de priorité correspondant à chacun des:
+                -- receveurs, 
+                -- les personnes en Cc 
+                -- et en Cci.
+--    (1) Important= expediteur est un contact direct (est dans la liste de contacts du recepteur) 
+                -- qui n'est pas bloqué ou est "equipesmartmail@smail.ca" 
+--    (2) Normal = expediteur est de niveau 2 
+                -- (est dans la liste de contacts d'au moins un des contacts du recepteur et n'est pas bloqué). 
+                -- Si il est bloqué par au moins un contact, alors il passe au niveau suivant.
 --    (3) Faible = expediteur n'est ni un contact direct, n'est ni de niveau 2, n'est ni l'équipe smartMail.ca
 --
 -- >>> s1 = ajoutCompte csmail0 $ ajoutCompte csmail6 $ ajoutCompte csmail5 $ ajoutCompte csmail4 $ ajoutCompte csmail2 $ ajoutCompte csmail1 emptySmartMail
@@ -90,7 +97,24 @@ obtenirCompte c sMail = fromJust $ Map.lookup c sMail
 -- >>> prioritesMessage s1 (courriel pers2, map courriel [pers5, pers2], map courriel [pers4], map courriel [pers9, pers0, pers4 ], "Cool", "Allo Alex, mon premier message :).")
 -- [[Normal,Faible],[Normal],[Faible,Faible,Normal]]
 prioritesMessage :: SmartMail -> Message -> [[Priorite]]
-prioritesMessage = error " à compléter"
+prioritesMessage sMail (c, r, ccs, ccis, _, _)
+               | c == "equipesmartmail@smail.ca" = [pMsgRecp Important r , pMsgCcs Important  ccs , pMsgCcis Important ccis]
+               | otherwise = [[Important]]
+
+
+
+pMsgRecp :: Priorite -> [Courriel] -> [Priorite]
+pMsgRecp p [] = []
+pMsgRecp p (x:xs) = p : pMsgRecp p xs
+
+
+pMsgCcs :: Priorite -> [Courriel] -> [Priorite]
+pMsgCcs p [] = []
+pMsgCcs p (x:xs) = p : pMsgCcs p xs
+
+pMsgCcis :: Priorite -> [Courriel] -> [Priorite]
+pMsgCcis p [] = []
+pMsgCcis p (x:xs) = p : pMsgCcis p xs
 
 
 

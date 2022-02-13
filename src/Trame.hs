@@ -15,6 +15,7 @@ import Personne
 import Data.Time.Clock
 import Data.Time.Calendar
 import System.IO.Unsafe
+import Language.Haskell.TH (Callconv(Prim))
 
 data TypeMessage = Spam | NonSpam deriving (Show, Eq, Read)
 type Annee = Integer
@@ -64,4 +65,4 @@ objet (Trame (Entete _ o _ _ _ _) _ ) = o
 contenu :: Trame -> String
 contenu (Trame _ c ) = c
 
-
+ 
