@@ -3,6 +3,7 @@ module SmartMail where
 import qualified Data.Map as Map
 import Data.Maybe
 import Data.List
+import Data.Monoid
 import Data.Char
 import Personne
 import Trame
@@ -17,9 +18,7 @@ first_third (f,_,t) = (f,t) -- Petite fonction utilisée dans les tests
 -- >>> nombreCompteSmail emptySmartMail
 -- 0
 emptySmartMail :: SmartMail 
-emptySmartMail = error " à compléter"
-
--- emptySmartMail  = Map.empty
+emptySmartMail = Map.empty
 
 -- | Ajout d'un compteSmail 
 --
@@ -28,15 +27,20 @@ emptySmartMail = error " à compléter"
 -- >>> s1 = ajoutCompte csmail2 $ ajoutCompte csmail1 emptySmartMail
 -- >>> courrielsComptes s1
 -- ["nkambou.roger@smail.ca","tato.ange@smail.ca"]
+
+
 ajoutCompte :: CompteSmail -> SmartMail-> SmartMail
-ajoutCompte = error " à compléter"
+ajoutCompte compte dict
+                      | Map.member ( courriel ( personne compte ) ) dict = dict
+                      | otherwise = Map.insert (courriel ( personne compte )) compte dict
 
 -- | Ajout de plusieurs comptes Smail 
 --
 -- >>> courrielsComptes $ ajoutComptes [csmail1, csmail2] emptySmartMail
 -- ["nkambou.roger@smail.ca","tato.ange@smail.ca"]
 ajoutComptes::  [CompteSmail] -> SmartMail -> SmartMail 
-ajoutComptes = error " à compléter"
+ajoutComptes [] sm = sm
+ajoutComptes (x:xs) sm =  ajoutComptes xs (ajoutCompte x sm)
 
 -- | Affiche tous les courriels de comptes Smail
 --
@@ -46,7 +50,7 @@ ajoutComptes = error " à compléter"
 -- >>>courrielsComptes emptySmartMail
 -- []
 courrielsComptes ::SmartMail-> [Courriel]
-courrielsComptes = error " à compléter"
+courrielsComptes sm = Map.keys sm
 
 -- | Retourne nombre de CompteSmail contenu dans SmartMail
 --
@@ -56,7 +60,7 @@ courrielsComptes = error " à compléter"
 -- >>> nombreCompteSmail emptySmartMail
 -- 0
 nombreCompteSmail :: SmartMail -> Int
-nombreCompteSmail = error " à compléter"
+nombreCompteSmail sm = Map.size sm
 
 -- | Retoune le comptre Smail associé à un courriel dans SmartMail
 -- Note : On suppose que le courriel passé en argumemnt est associé à un compte existant du smartmail
@@ -69,7 +73,7 @@ nombreCompteSmail = error " à compléter"
 -- Spams = [],
 -- Contacts = [("nkambou.roger@smail.ca",Blanc),("noel.alice@smail.ca",Noir)]
 obtenirCompte :: Courriel -> SmartMail -> CompteSmail
-obtenirCompte = error " à compléter"
+obtenirCompte c sm = sm Map.! c
 
 -- | Déterminer la priorité d'un message non spam, pour chacune des personnes dans les listes receveurs, cc et cci
 -- Note: on suppose que le message est un message non spam.
@@ -85,10 +89,32 @@ obtenirCompte = error " à compléter"
 -- [[Important,Faible],[Important],[Faible,Faible,Important]]
 -- >>> prioritesMessage s1 (courriel pers2, map courriel [pers5, pers2], map courriel [pers4], map courriel [pers9, pers0, pers4 ], "Cool", "Allo Alex, mon premier message :).")
 -- [[Normal,Faible],[Normal],[Faible,Faible,Normal]]
+
+-- |&&   courriel elem contactdirect && personne ne bloquepas = Important
+
+trouvercourriel :: Message -> String
+trouvercourriel (c,_,_,_,_,_ ) = c
+
+
+-- contacts1 :: [CompteSmail]  -> [Contact]
+-- contacts1 []                         = []
+-- contacts1 [CompteSmail _ _ _ _ _ c ] = c 
+
+---- contact à l'état Noir est un contact bloqué. Retourne vrai si contact bloqué (Noir)                   
+-- bloquer :: Personne -> [Contact] -> Bool
+-- bloquer _ [] = False
+-- bloquer p (x:xs) = if p == fst x && snd x == Noir then False else bloquer p xs
+                    
+
+-- prioritesMessage0 :: SmartMail -> Message -> [[Priorite]]
+-- prioritesMessage0 sm mes
+--                         |  Map.notMember (trouvercourriel mes) sm  = []
+--                         | (trouvercourriel mes) == "equipesmartmail@smail.ca"  = [Important]                       
+--                         | (Map.notMember (trouvercourriel mes) sm == False)  && (bloquer (personne (Map.elems sm)) (contacts (Map.elems sm)) ) = [Normal] 
+--                         | otherwise = [Faible]
+                          
 prioritesMessage :: SmartMail -> Message -> [[Priorite]]
-prioritesMessage = error " à compléter"
-
-
+prioritesMessage  = error " à compléter"
 
 -------------------------------------------------------------------
 ---------- FILTRES ANTI SPAM ET ANTI HAMEÇONNAGE ------------------ 
@@ -214,7 +240,7 @@ envoyerMessage = error " à compléter"
 -- >>> nbTotalSpams s
 -- 8
 nbTotalSpams :: SmartMail -> Int
-nbTotalSpams= error " à compléter"
+nbTotalSpams sm = sum [length(spams csm) | csm <- Map.elems(sm)]
 
 -- | Retourne l'ensemble de tous les spams du système dans une même liste
 --
@@ -225,7 +251,7 @@ nbTotalSpams= error " à compléter"
 -- >>> tousLesSpams s
 -- [(Trame (Entete (Date 2021 10 10) "un message" (Personne "equipesmartmail@smail.ca" ("equipe","smail")) [Personne "tato.ange@smail.ca" ("","")] [] []) "0de 3Bienvenue dans 1 et 9 | pour tp1et2","classique_contenu, 67% de mots comportant des caracteres etranges."),(Trame (Entete (Date 2021 1 15) "un message" (Personne "equipesmartmail@smail.ca" ("equipe","smail")) [Personne "tato.ange@smail.ca" ("","")] [] []) "offre de Bienvenue dans  publicite gratuit pour voyage special","publicitaire, 56% de mots suspects."),(Trame (Entete (Date 2020 18 10) "un message" (Personne "equipesmartmail@smail.ca" ("equipe","smail")) [Personne "tato.ange@smail.ca" ("","")] [] []) "Bienvenue dans sexe du viagra chaud nu","hameconnage, 57% de mots suspects."),(Trame (Entete (Date 2018 5 7) "Bienvenue $ " (Personne "equipesmartmail@smail.ca" ("equipe","smail")) [Personne "tato.ange@smail.ca" ("","")] [] []) "Bienvenue dans votre boite smartMail !","classique_enveloppe"),(Trame (Entete (Date 2019 10 5) "" (Personne "equipesmartmail@smail.ca" ("equipe","smail")) [Personne "tato.ange@smail.ca" ("","")] [] []) "Bienvenue dans votre boite smartMail !","objet vide"),(Trame (Entete (Date 2020 12 21) "Bi!en! venue!" (Personne "equipesmartmail@smail.ca" ("equipe","smail")) [Personne "tato.ange@smail.ca" ("","")] [] []) "Bienvenue dans votre boite smartMail !","classique_enveloppe"),(Trame (Entete (Date 2020 12 21) "Bi!en! venue!" (Personne "equipesmartmail@smail.ca" ("equipe","smail")) [Personne "tato.ange@smail.ca" ("","")] [] []) "Bienvenue dans votre boite smartMail !","classique_enveloppe"),(Trame (Entete (Date 2021 1 18) "AB CD EF" (Personne "equipesmartmail@smail.ca" ("equipe","smail")) [Personne "tato.ange@smail.ca" ("","")] [] []) "Bienvenue dans votre boite smartMail !","classique_enveloppe")]
 tousLesSpams:: SmartMail -> [(Trame, Explications)]
-tousLesSpams = error " à compléter"
+tousLesSpams sm = foldr (\x acc -> acc ++ spams x) [] (Map.elems(sm))
 
 -- | Retourne la liste qui associe à chaque inscrit (son courriel seulement), le nombre de spams recus. Résultat par ordre alphabétique de courriels
 --
@@ -236,7 +262,7 @@ tousLesSpams = error " à compléter"
 -- >>> statSpamsRecus s
 -- [("bourassa.alex@smail.ca",0),("equipesmartmail@smail.ca",0),("nkambou.roger@smail.ca",0),("noel.alice@smail.ca",0),("robert.julien@smail.ca",0),("tato.ange@smail.ca",8)]
 statSpamsRecus :: SmartMail -> [(String, Int)]
-statSpamsRecus = error " à compléter"
+statSpamsRecus sm = [((courriel (personne csm)), length(spams csm)) | csm <- Map.elems(sm)]
 
 -- | Produit une liste qui associe à chaque inscrit (son courriel seulement), le nombre de spams produit
 --
@@ -246,8 +272,13 @@ statSpamsRecus = error " à compléter"
 -- []
 -- >>> statSpamsEnvoyes s
 -- [("equipesmartmail@smail.ca",8)]
+
 statSpamsEnvoyes :: SmartMail -> [(Courriel, Int)]
-statSpamsEnvoyes = error " à compléter"
+statSpamsEnvoyes sm =  spamsEnvoyes $ (map(\(x,y)->(emetteur x))(tousLesSpams sm))
+ 
+spamsEnvoyes::[Courriel]->[(Courriel, Int)]
+spamsEnvoyes[] = []
+spamsEnvoyes courriel = Map.toList $ Map.fromListWith (+) [(c, 1) | c <- courriel]
 
 
 
@@ -257,8 +288,13 @@ statSpamsEnvoyes = error " à compléter"
 -- >>> s = envoyerMessage_Plusieurstrames s1 [trame1, trame2,trame2,trame4,trame5,trame6,trame7,trame8,trame9]
 -- >>> length $ spams $ obtenirCompte "tato.ange@smail.ca"  s
 -- 8
-envoyerMessage_Plusieurstrames :: SmartMail -> [Trame] -> SmartMail
-envoyerMessage_Plusieurstrames = error " à compléter"
+-- envoyerMessage_Plusieurstrames :: SmartMail -> [Trame] -> SmartMail
+-- envoyerMessage_Plusieurstrames sm [] = sm
+-- envoyerMessage_Plusieurstrames sm (x:xs)  = (envoyerMsg sm x) <> (envoyerMessage_Plusieurstrames sm xs)
+
+-- envoyerMsg :: SmartMail -> Trame -> SmartMail
+-- envoyerMsg sm x = Map.insert  (emetteur x) (comptesmail) sm 
+--                                where comptesmail = CompteSmail (personne (obtenirCompte ( emetteur x ) sm)) (reception (obtenirCompte ( emetteur x) sm)) ((envoi (obtenirCompte ( emetteur x) sm))++[x]) (spams (obtenirCompte ( emetteur x) sm)) (preferences (obtenirCompte ( emetteur x) sm)) (contacts (obtenirCompte ( emetteur x) sm))
 
 
 -- | Extraire les n premiers messages  de chacune des 3  boîtes : Reception, Envoi, Spams de chaque compte du SmartMail
