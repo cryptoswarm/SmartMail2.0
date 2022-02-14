@@ -98,25 +98,39 @@ obtenirCompte c sMail = fromJust $ Map.lookup c sMail
 -- [[Normal,Faible],[Normal],[Faible,Faible,Normal]]
 prioritesMessage :: SmartMail -> Message -> [[Priorite]]
 prioritesMessage sMail (c, r, ccs, ccis, _, _)
-               | c == "equipesmartmail@smail.ca" = [pMsgRecp Important r , pMsgCcs Important  ccs , pMsgCcis Important ccis]
-               | otherwise = [[Important]]
+               | c == "equipesmartmail@smail.ca" = [replicate (length r)  Important, replicate (length ccs) Important, replicate (length ccis) Important]
+               | otherwise = [pMsgRecp c sMail r, pMsgRecp c sMail ccs, pMsgRecp c sMail ccis]
 
 
 
-pMsgRecp :: Priorite -> [Courriel] -> [Priorite]
-pMsgRecp p [] = []
-pMsgRecp p (x:xs) = p : pMsgRecp p xs
+-- pMsgRecp :: Courriel ->  SmartMail -> [Courriel] -> [Priorite]
+-- pMsgRecp sender sm [] = []
+-- pMsgRecp sender sm (x:xs)
+--                         | isLevelOne sender (contacts $ fromJust $ Map.lookup x sm) = Important : pMsgRecp sender sm xs
+--                         | otherwise = Faible : pMsgRecp sender sm xs
+
+pMsgRecp :: Courriel ->  SmartMail -> [Courriel] -> [Priorite]
+pMsgRecp sender sm [] = []
+pMsgRecp sender sm (x:xs)
+                        | isLevelOne sender (contacts $ fromJust $ Map.lookup x sm) = Important : pMsgRecp sender sm xs
+                        | isLevelTwo sender (contacts $ fromJust $ Map.lookup x sm) sm = Normal : pMsgRecp sender sm xs
+                        | otherwise = Faible : pMsgRecp sender sm xs
+                         
+
+isLevelOne :: Courriel ->  [Contact] -> Bool
+isLevelOne c [] = False 
+isLevelOne c xs = foldl (\acc x -> if (courriel (fst x ) == c && snd x == Blanc) then True else acc) False xs
+
+--foldl (\acc x -> if x == y then True else acc) False ys 
+
+isLevelTwo :: Courriel -> [Contact] -> SmartMail  -> Bool
+isLevelTwo c [] sm = False 
+isLevelTwo c xs sm = foldl (\acc x -> if isLevelOne c  (getContacts x sm ) then True else acc) False xs
 
 
-pMsgCcs :: Priorite -> [Courriel] -> [Priorite]
-pMsgCcs p [] = []
-pMsgCcs p (x:xs) = p : pMsgCcs p xs
 
-pMsgCcis :: Priorite -> [Courriel] -> [Priorite]
-pMsgCcis p [] = []
-pMsgCcis p (x:xs) = p : pMsgCcis p xs
-
-
+getContacts :: Contact -> SmartMail -> [Contact]
+getContacts x sm = contacts $ fromJust $ Map.lookup (courriel (fst x )) sm
 
 -------------------------------------------------------------------
 ---------- FILTRES ANTI SPAM ET ANTI HAMEÇONNAGE ------------------ 
