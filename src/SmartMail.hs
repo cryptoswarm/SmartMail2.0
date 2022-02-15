@@ -263,6 +263,10 @@ envoyerMessage :: SmartMail -> Message -> SmartMail
 envoyerMessage = error " à compléter"
 
 
+getTrame :: Message -> Trame 
+getTrame msg = buildTrame msg enteteFromMsg msgContenu
+
+
 -------------------------------------------------------------------
 --------------------   STATISTIQUES ET AFFICHAGES   ---------------   
 -------------------------------------------------------------------
