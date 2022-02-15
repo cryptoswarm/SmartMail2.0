@@ -102,29 +102,21 @@ prioritesMessage sMail (c, r, ccs, ccis, _, _)
                | otherwise = [pMsgRecp c sMail r, pMsgRecp c sMail ccs, pMsgRecp c sMail ccis]
 
 
-
--- pMsgRecp :: Courriel ->  SmartMail -> [Courriel] -> [Priorite]
--- pMsgRecp sender sm [] = []
--- pMsgRecp sender sm (x:xs)
---                         | isLevelOne sender (contacts $ fromJust $ Map.lookup x sm) = Important : pMsgRecp sender sm xs
---                         | otherwise = Faible : pMsgRecp sender sm xs
-
 pMsgRecp :: Courriel ->  SmartMail -> [Courriel] -> [Priorite]
 pMsgRecp sender sm [] = []
 pMsgRecp sender sm (x:xs)
                         | isLevelOne sender (contacts $ fromJust $ Map.lookup x sm) = Important : pMsgRecp sender sm xs
                         | isLevelTwo sender (contacts $ fromJust $ Map.lookup x sm) sm = Normal : pMsgRecp sender sm xs
                         | otherwise = Faible : pMsgRecp sender sm xs
-                         
+
 
 isLevelOne :: Courriel ->  [Contact] -> Bool
-isLevelOne c [] = False 
+isLevelOne c [] = False
 isLevelOne c xs = foldl (\acc x -> if (courriel (fst x ) == c && snd x == Blanc) then True else acc) False xs
 
---foldl (\acc x -> if x == y then True else acc) False ys 
 
 isLevelTwo :: Courriel -> [Contact] -> SmartMail  -> Bool
-isLevelTwo c [] sm = False 
+isLevelTwo c [] sm = False
 isLevelTwo c xs sm = foldl (\acc x -> if isLevelOne c  (getContacts x sm ) then True else acc) False xs
 
 
@@ -170,8 +162,36 @@ getContacts x sm = contacts $ fromJust $ Map.lookup (courriel (fst x )) sm
 -- (NonSpam,Trame (Entete (Date 2022 2 14) "Je suis le prince de Namek" (Personne "satan.peticoeur@smail.ca" ("Satan","Peticoeur")) [Personne "tato.ange@smail.ca" ("ange","tato")] [Personne "adam.ronelle@smail.ca" ("Adam","Ronelle")] [Personne "gabrielle.joyce@smail.ca" ("Gabrielle","Joyce"),Personne "marsu.pilami@smail.ca" ("Marsu","Pilami")]) "Je suis satan petit coeur et je viens de la planete Namek.","")
 
 filtrageEnveloppe :: Trame -> SmartMail -> Courriel -> (TypeMessage, Trame, Explications)
-filtrageEnveloppe = error " à compléter"
+filtrageEnveloppe t sm c
+                       | isObjectUpper t || length (charInObject '!' t) >= 2 || length (charInObject '?' t) >= 2 || length (charInObject '$' t) >= 1  = (Spam, t, "classique_enveloppe")
+                       | null ( objet t) = (Spam, t, "objet vide")
+                       | isSenderBlocked c t sm = (Spam, t, "contact bloque")
+                       | otherwise = (NonSpam , t, "")
 
+isObjectUpper :: Trame -> Bool
+isObjectUpper t = foldl (\acc x -> if x && acc then acc else False ) True  (isUpper' (objet t))
+
+
+-- 2 times of ! 2 times of ?  1 of $
+isUpper' :: [Char] -> [Bool]
+isUpper' [] = []
+isUpper' (x:xs)
+              | not (isLetter x) = isUpper' xs
+              | otherwise = isUpper x : isUpper' xs
+
+charInObject :: Char -> Trame -> [Bool]
+charInObject char t = filter (\x -> x == True) (map (\x -> x == char ) (objet t))
+
+
+isSenderBlocked :: Courriel -> Trame -> SmartMail -> Bool
+isSenderBlocked c t sm = isSenderBlocked' (emetteur t) (contacts (obtenirCompte c sm ))
+
+isSenderBlocked' :: Courriel -> [Contact] -> Bool
+isSenderBlocked' c [] = False
+isSenderBlocked' c (x:xs)
+                        | (courriel (fst x) == c)  && (snd x == Noir) = True
+                        | otherwise = isSenderBlocked' c xs
+-- isUpper' (x:xs) = if (isLetter x && isUpper x )then False else True  : isUpper' xs
 
 -- | Filtrage du contenu
 -- Les filtres de contenu analysent le contenu des messages et détectent les spams qui ont réussi à passer à travers le filtre d'enveloppe.
