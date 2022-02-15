@@ -16,14 +16,9 @@ first_third (f,_,t) = (f,t) -- Petite fonction utilisée dans les tests
 -- | Retourne un SmartMail vide
 --
 -- >>> nombreCompteSmail emptySmartMail
--- 0
-emptySmartMail :: SmartMail 
-<<<<<<< HEAD
+emptySmartMail :: SmartMail
 emptySmartMail = Map.empty
-=======
-emptySmartMail = error " à compléter"
 
->>>>>>> 63ee9860d10eef85c14ea63bb108bf7da33f27ce
 
 -- | Ajout d'un compteSmail 
 --
@@ -78,7 +73,7 @@ nombreCompteSmail sm = Map.size sm
 -- Spams = [],
 -- Contacts = [("nkambou.roger@smail.ca",Blanc),("noel.alice@smail.ca",Noir)]
 obtenirCompte :: Courriel -> SmartMail -> CompteSmail
-obtenirCompte c sm = sm Map.! c
+obtenirCompte c sMail = fromJust $ Map.lookup c sMail
 
 -- | Déterminer la priorité d'un message non spam, pour chacune des personnes dans les listes receveurs, cc et cci
 -- Note: on suppose que le message est un message non spam.
@@ -158,8 +153,36 @@ prioritesMessage  = error " à compléter"
 -- >>> filtrageEnveloppe trame17 s1 "adam.ronelle@smail.ca"
 -- (NonSpam,Trame (Entete (Date 2022 2 14) "Je suis le prince de Namek" (Personne "satan.peticoeur@smail.ca" ("Satan","Peticoeur")) [Personne "tato.ange@smail.ca" ("ange","tato")] [Personne "adam.ronelle@smail.ca" ("Adam","Ronelle")] [Personne "gabrielle.joyce@smail.ca" ("Gabrielle","Joyce"),Personne "marsu.pilami@smail.ca" ("Marsu","Pilami")]) "Je suis satan petit coeur et je viens de la planete Namek.","")
 
-filtrageEnveloppe :: Trame -> SmartMail -> Courriel -> (TypeMessage, Trame, Explications) 
-filtrageEnveloppe = error " à compléter"
+filtrageEnveloppe :: Trame -> SmartMail -> Courriel -> (TypeMessage, Trame, Explications)
+filtrageEnveloppe t sm c
+                       | isObjectUpper t || length (charInObject '!' t) >= 2 || length (charInObject '?' t) >= 2 || length (charInObject '$' t) >= 1  = (Spam, t, "classique_enveloppe")
+                       | null ( objet t) = (Spam, t, "objet vide")
+                       | isSenderBlocked c t sm = (Spam, t, "contact bloque")
+                       | otherwise = (NonSpam , t, "")
+
+isObjectUpper :: Trame -> Bool
+isObjectUpper t = foldl (\acc x -> if x && acc then acc else False ) True  (isUpper' (objet t))
+
+
+-- 2 times of ! 2 times of ?  1 of $
+isUpper' :: [Char] -> [Bool]
+isUpper' [] = []
+isUpper' (x:xs)
+              | not (isLetter x) = isUpper' xs
+              | otherwise = isUpper x : isUpper' xs
+
+charInObject :: Char -> Trame -> [Bool]
+charInObject char t = filter (\x -> x == True) (map (\x -> x == char ) (objet t))
+
+
+isSenderBlocked :: Courriel -> Trame -> SmartMail -> Bool
+isSenderBlocked c t sm = isSenderBlocked' (emetteur t) (contacts (obtenirCompte c sm ))
+
+isSenderBlocked' :: Courriel -> [Contact] -> Bool
+isSenderBlocked' c [] = False
+isSenderBlocked' c (x:xs)
+                        | (courriel (fst x) == c)  && (snd x == Noir) = True
+                        | otherwise = isSenderBlocked' c xs
 
 
 -- | Filtrage du contenu
@@ -279,8 +302,7 @@ statSpamsRecus sm = [((courriel (personne csm)), length(spams csm)) | csm <- Map
 -- [("equipesmartmail@smail.ca",8)]
 
 statSpamsEnvoyes :: SmartMail -> [(Courriel, Int)]
-statSpamsEnvoyes sm =  spamsEnvoyes $ (map(\(x,y)->(emetteur x))(tousLesSpams sm))
- 
+statSpamsEnvoyes sm =  spamsEnvoyes $ (map(\(x,y)->(emetteur x))(tousLesSpams sm)) 
 spamsEnvoyes::[Courriel]->[(Courriel, Int)]
 spamsEnvoyes[] = []
 spamsEnvoyes courriel = Map.toList $ Map.fromListWith (+) [(c, 1) | c <- courriel]
@@ -293,13 +315,8 @@ spamsEnvoyes courriel = Map.toList $ Map.fromListWith (+) [(c, 1) | c <- courrie
 -- >>> s = envoyerMessage_Plusieurstrames s1 [trame1, trame2,trame2,trame4,trame5,trame6,trame7,trame8,trame9]
 -- >>> length $ spams $ obtenirCompte "tato.ange@smail.ca"  s
 -- 8
--- envoyerMessage_Plusieurstrames :: SmartMail -> [Trame] -> SmartMail
--- envoyerMessage_Plusieurstrames sm [] = sm
--- envoyerMessage_Plusieurstrames sm (x:xs)  = (envoyerMsg sm x) <> (envoyerMessage_Plusieurstrames sm xs)
-
--- envoyerMsg :: SmartMail -> Trame -> SmartMail
--- envoyerMsg sm x = Map.insert  (emetteur x) (comptesmail) sm 
---                                where comptesmail = CompteSmail (personne (obtenirCompte ( emetteur x ) sm)) (reception (obtenirCompte ( emetteur x) sm)) ((envoi (obtenirCompte ( emetteur x) sm))++[x]) (spams (obtenirCompte ( emetteur x) sm)) (preferences (obtenirCompte ( emetteur x) sm)) (contacts (obtenirCompte ( emetteur x) sm))
+envoyerMessage_Plusieurstrames :: SmartMail -> [Trame] -> SmartMail
+envoyerMessage_Plusieurstrames = error " à compléter"
 
 
 -- | Extraire les n premiers messages  de chacune des 3  boîtes : Reception, Envoi, Spams de chaque compte du SmartMail
@@ -344,9 +361,18 @@ supprimerOldMessages = error " à compléter"
 -- >>> reformaterBoite [trame12, trame13, trame14, trame15, trame17]
 -- fromList [("ariane.carotte@techno.co",[("9/2/2021","Bingo","J'ai trouve ce que tu cherchais hier")]),("pablo.adamo@blob.es",[("18/3/2021","Hola mimi","como estas ?")]),("robert.julien@smail.ca",[("18/1/2021","Salut roger","special voyage demain, viens vite"),("17/11/2020","Salut ange","Salut Ange tu vas bien ?")]),("satan.peticoeur@smail.ca",[("14/2/2022","Je suis le prince de Namek","Je suis satan petit coeur et je viens de la planete Namek.")])]
 reformaterBoite :: [Trame] -> Map.Map String [(String, String, String)]
-reformaterBoite = error " à compléter"
+reformaterBoite t =
+  foldl
+    (\acc (k, v) -> Map.insertWith (++) k v acc)
+    Map.empty
+    (zip
+       (map emetteur t)
+       (map (: []) (zip3 unString (map objet t) (map contenu t))))
+  where
+    unString = map convertToString (map date t)
 
-
+convertToString :: Date -> [Char]
+convertToString (Date a m j) = show j ++ "/" ++ show m ++ "/" ++ show a
 
 
 -- | Reformater compte
@@ -358,11 +384,21 @@ reformaterBoite = error " à compléter"
 -- >>> ssm4 = Map.fromList [("nkambou.roger@smail.ca",CompteSmail (Personne "nkambou.roger@smail.ca" ("roger","nkambou")) [Trame (Entete (Date 2019 10 2) "Bienvenue" pers0 [pers2] [] []) "Bienvenue dans votre boite smartMail !"] [Trame (Entete (Date 2019 10 26) "toto" pers2 [pers1] [] []) "tato "] [] [] []),("tato.ange@smail.ca",CompteSmail (Personne "tato.ange@smail.ca" ("ange","tato")) [Trame (Entete (Date 2019 10 26) "toto" pers2 [pers1] [] []) "tato ", Trame (Entete (Date 2019 10 25) "ggg" pers4 [pers1] [] []) "jjjj",Trame (Entete (Date 2019 10 2) "Bienvenue" pers0 [pers1] [] []) "Bienvenue dans votre boite smartMail !"] [] [(Trame (Entete (Date 2019 10 25) "ghgh jjhjh" pers3 [pers1] [] []) "hgg6gg jhh7hh","Classique!! Contient 100% de mots comportant des caracteres etranges.")] [] []),("toto.tartampion@smail.ca",CompteSmail (Personne "toto.tartampion@smail.ca" ("tartampion","toto")) [] [Trame (Entete (Date 2019 10 25) "ghgh jjhjh" pers3 [pers1] [] []) "hgg6gg jhh7hh",Trame (Entete (Date 2019 10 25) "ggg" pers3 [pers1] [] []) "jjjj"] [] [] [])]
 -- >>> reformaterCompte $ obtenirCompte "tato.ange@smail.ca" ssm4
 -- (fromList [("equipesmartmail@smail.ca",[("2/10/2019","Bienvenue","Bienvenue dans votre boite smartMail !")]),("nkambou.roger@smail.ca",[("26/10/2019","toto","tato ")]),("noel.alice@smail.ca",[("25/10/2019","ggg","jjjj")])],fromList [],fromList [("robert.julien@smail.ca",[("25/10/2019","ghgh jjhjh","hgg6gg jhh7hh")])])
-reformaterCompte :: CompteSmail
-     -> (Map.Map String [(String, String, String)],
-         Map.Map String [(String, String, String)],
-         Map.Map String [(String, String, String)])
-reformaterCompte = error " à compléter"
+
+reformaterCompte ::
+     CompteSmail
+  -> ( Map.Map String [(String, String, String)]
+     , Map.Map String [(String, String, String)]
+     , Map.Map String [(String, String, String)])
+reformaterCompte csm =
+  ( reformaterBoite $ reception csm
+  , reformaterBoite $ envoi csm
+  , reformaterBoite $ getunTrame $ spams csm)
+
+getunTrame :: [(Trame, Explications)] -> [Trame]
+getunTrame []     = []
+getunTrame (x:xs) = ((\(t, e) -> t) x) : (getunTrame xs)
+
 
 
 -- | Filtrage par prefrences
@@ -374,5 +410,8 @@ reformaterCompte = error " à compléter"
 -- >>> s = ajoutCompte csmail6 emptySmartMail
 -- >>> map (flip (filtragePreference) s) [trame14, trame15, trame16]
 -- [(Spam,Trame (Entete (Date 2021 3 18) "Hola mimi" (Personne "pablo.adamo@blob.es" ("olivier","adam")) [Personne "mimi.lafleur@smail.ca" ("mimi","lafleur")] [] []) "como estas ?","probleme de preferences"),(NonSpam,Trame (Entete (Date 2021 2 9) "Bingo" (Personne "ariane.carotte@techno.co" ("arianne","carotte")) [Personne "mimi.lafleur@smail.ca" ("mimi","lafleur")] [] []) "J'ai trouve ce que tu cherchais hier",""),(NonSpam,Trame (Entete (Date 2021 1 7) "Par rapport a Ivan" (Personne "michel.desrosiers@blob.ca" ("michel","desrosiers")) [Personne "mimi.lafleur@smail.ca" ("mimi","lafleur")] [] []) "Ivan ne viendra pas demain ?","")]
+
 filtragePreference :: Trame -> SmartMail-> (TypeMessage, Trame, Explications)
-filtragePreference = error " à compléter"
+filtragePreference tra sm | ((preferences (obtenirCompte ((receveurs tra )  !! 0) sm)) !! 0) tra == True = (NonSpam, tra, "")
+                          | otherwise = (Spam, tra, "probleme de preferences" )
+
