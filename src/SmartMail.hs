@@ -8,6 +8,7 @@ import Personne
 import Trame
 import CompteSmail
 import System.Directory
+import Data.List.Split
 
 
 type SmartMail = Map.Map Courriel CompteSmail -- Dictionnaire de comptes smail
@@ -163,7 +164,7 @@ getContacts x sm = contacts $ fromJust $ Map.lookup (courriel (fst x )) sm
 
 filtrageEnveloppe :: Trame -> SmartMail -> Courriel -> (TypeMessage, Trame, Explications)
 filtrageEnveloppe t sm c
-                       | isObjectUpper t || length (charInObject '!' t) >= 2 || length (charInObject '?' t) >= 2 || length (charInObject '$' t) >= 1  = (Spam, t, "classique_enveloppe")
+                       | isObjectUpper t || length (charInObject '!' t) >= 2 || length (charInObject '?' t) >= 2 || not (null (charInObject '$' t))  = (Spam, t, "classique_enveloppe")
                        | null ( objet t) = (Spam, t, "objet vide")
                        | isSenderBlocked c t sm = (Spam, t, "contact bloque")
                        | otherwise = (NonSpam , t, "")
@@ -217,10 +218,53 @@ isSenderBlocked' c (x:xs)
 -- (Spam,"classique_contenu, 100% de mots comportant des caracteres etranges.")
 -- >>> first_third $ filtrageContenu trame11
 -- (Spam,"classique_contenu, 100% de mots comportant des caracteres etranges.")
+
+hamconageKeyWords = ["sexe", "sexy", "viagra", "argent", "drogue", "money","credit", "$","chaud", "nu", "click", "amateur", "pics","videos", "gagner","lotterie","heritage"]
+pubKeyWords = ["offre", "commande", "click", "videos","gratuit","publicite", "special","voyage"]
+charSpeciaux = ['|','0'..'9']
+
 filtrageContenu :: Trame -> (TypeMessage, Trame, Explications)
-filtrageContenu = error " à compléter"
+filtrageContenu t
+                | hams >= 10 = (Spam, t, "hameconnage, "++ show hams ++ "% de mots suspects.")
+                | pups >= 10 = (Spam, t, "publicitaire, "++ show pups ++ "% de mots suspects.")
+                | specialChar >= 10 = (Spam, t, "publicitaire, "++ show specialChar ++ "% de mots suspects.")
+                | otherwise = (Spam , t, "bababa")
+                where hams = filtreSpecifique hamconageKeyWords (contenu t)
+                      pups = filtreSpecifique pubKeyWords (contenu t)
+                      specialChar = filtreCaracteresSpeciaux (words (contenu t)) ['|', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
+
+--filtreSpecifiqueHams pour les mots-clés suivants: "sexe", "sexy", "viagra", "argent", "drogue", "money","credit", "$","chaud", "nu", "click", "amateur", "pics","videos", "gagner","lotterie","heritage".
 
 
+filtreSpecifique :: [[Char]] -> [Char] -> Int
+filtreSpecifique _ [] = 0
+filtreSpecifique [] _ = 0
+filtreSpecifique xs ys =  length (isWordInMsg xs ys) * 100 `div` length  (words ys)
+
+
+isWordInMsg :: [[Char]] -> [Char] -> [Bool]
+isWordInMsg _ [] = []
+isWordInMsg [] _ = []
+isWordInMsg  (x:xs) ys
+                     | x `elem` words ys = True : isWordInMsg xs ys
+                     | otherwise = isWordInMsg xs ys
+
+filtreCaracteresSpeciaux :: [[Char]] -> [Char] -> Int
+filtreCaracteresSpeciaux [] _ = 0
+filtreCaracteresSpeciaux _ [] = 0
+--filtreCaracteresSpeciaux xs ys = round (fromIntegral foldSChars)  `div` (fromIntegral nbrWords)
+filtreCaracteresSpeciaux xs ys = calculateOrder foldSChars  nbrWords
+                               where foldSChars = toInteger (exp * 100)
+                                     exp = foldl (\acc x -> if wordContainsChar x ys then acc + 1 else acc ) 0 xs
+                                     nbrWords = realToFrac (length xs)
+
+wordContainsChar :: [Char] -> [Char] -> Bool
+wordContainsChar _ [] = False
+wordContainsChar xs (y:ys) = y `elem` xs ||  wordContainsChar xs ys
+
+--calculateOrder :: (Integral a, Fractional a) =>  a  -> a  -> Int
+calculateOrder :: (RealFrac a, Integral b) => a -> a -> b
+calculateOrder x y = round( x / y)
 -- | Envoyer message
 -- Remarque 1: Il faut vérifier l'enveloppe de la trame ainsi que son contenu. Si c'est un spam, l'ajouter dans la boîte de spams et non de reception.
 -- Remarque 2: Il peut avoir plusieurs receveurs principaux, plusieurs personnes en Cc et plusieurs personnes en Cci. Les receveurs et les personnes en Cc ne doivent pas voir les personnes en Cci. Les personnes en cci ne doivent pas voir les autres personnes en cci.
@@ -263,7 +307,7 @@ envoyerMessage :: SmartMail -> Message -> SmartMail
 envoyerMessage = error " à compléter"
 
 
-getTrame :: Message -> Trame 
+getTrame :: Message -> Trame
 getTrame msg = buildTrame msg enteteFromMsg msgContenu
 
 
