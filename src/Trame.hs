@@ -102,3 +102,23 @@ msgObj (_, _, _, _, o, _) = o
 
 msgContenu :: Message -> Contenu
 msgContenu (_, _, _, _, _, cn) = cn
+
+
+
+emailEmetter :: Message -> Courriel 
+emailEmetter (c, _, _, _, _, _) = c
+
+emailRecepteurs :: Message -> [Courriel]
+emailRecepteurs (_, r, _, _, _, _) = r
+
+emailCC :: Message -> [Courriel]
+emailCC (_, _, cc, _, _, _) = cc
+
+emailCCi :: Message -> [Courriel]
+emailCCi (_, _, _, cci, _, _) =  cci
+
+emailObj :: Message -> Objet
+emailObj (_, _, _, _, o, _) = o
+
+emailContenu :: Message -> Contenu
+emailContenu (_, _, _, _, _, cn) = cn
