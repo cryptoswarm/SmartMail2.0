@@ -26,6 +26,7 @@ type Spams = [(Trame, Explications)] -- boîte des spams
 type Preferences = [Trame -> Bool]
 data CompteSmail  = CompteSmail Personne Reception Envoi Spams Preferences [Contact] -- Compte smail 
 -- Vous devez faire du type CompteSmail une instance de la classe Show. Vous devez donc redéfinir la fonction show pour ce type. Voir les exemples pour voir comment l'affichage est gérer
+type OneOf = (Envoi, Spams, Reception)
 
 listeContacts [] = []
 listeContacts ((p,e):xs) = (courriel p, e):listeContacts xs
