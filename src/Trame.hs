@@ -122,3 +122,6 @@ emailObj (_, _, _, _, o, _) = o
 
 emailContenu :: Message -> Contenu
 emailContenu (_, _, _, _, _, cn) = cn
+
+getMsgFromTrame :: Trame -> Message
+getMsgFromTrame t = (emetteur t, receveurs t, receveurCc t, receveurCci t, objet t, contenu t)

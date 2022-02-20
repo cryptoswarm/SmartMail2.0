@@ -136,8 +136,9 @@ getContacts x sm = contacts $ fromJust $ Map.lookup (courriel (fst x )) sm
 --      (3) l'objet contient au moins 2 points d'interrogation "?" (Explications = "classique_enveloppe")
 --      (4) l'objet est vide (Explications = "objet vide")
 --      (5) l'objet contient le caractère "$" (Explications = "classique_enveloppe")
---      (6) l'emetteur a été bloqué (Etat = Noir) par le destinataire   (Explications = "contact bloque")  
--- Le courriel passé en paramètre à cette fonction servira pour le point (6). Le filtre est fait par rapport à la personne ayant le courriel passé en paramètre.
+--      (6) l'emetteur a été bloqué (Etat = Noir) par le destinataire (Explications = "contact bloque")  
+-- Le courriel passé en paramètre à cette fonction servira pour le point (6).
+-- Le filtre est fait par rapport à la personne ayant le courriel passé en paramètre.
 --
 -- >>> ssm2 = Map.fromList [("nkambou.roger@smail.ca", CompteSmail (Personne "nkambou.roger@smail.ca" ("roger","nkambou")) [Trame (Entete (Date 2019 10 2) "Bienvenue" pers0 [pers1] [] []) "Bienvenue dans votre boite smartMail !"] [] [] [] []),("robert.julien@smail.ca",CompteSmail (Personne "robert.julien@smail.ca" ("julien","robert")) [] [] [] [] [(Personne "tato.ange@smail.ca" ("",""),Noir)]),("tato.ange@smail.ca", CompteSmail (Personne "tato.ange@smail.ca" ("ange","tato")) [Trame (Entete (Date 2019 10 2) "Bienvenue" pers0 [pers1] [] []) "Bienvenue dans votre boite smartMail !"] [] [] [] [])]
 -- >>> filtrageEnveloppe trame6 ssm2 "robert.julien@smail.ca"
@@ -183,7 +184,8 @@ isUpper' (x:xs)
 charInObject :: Char -> Trame -> [Bool]
 charInObject char t = filter (\x -> x == True) (map (\x -> x == char ) (objet t))
 
-
+-- | Trouver si le destinataire a bloqué l'émeteur
+-- Courriel est le courriel du receveur
 isSenderBlocked :: Courriel -> Trame -> SmartMail -> Bool
 isSenderBlocked c t sm = isSenderBlocked' (emetteur t) (contacts (obtenirCompte c sm ))
 
@@ -316,8 +318,8 @@ calculateOrder x y = round  $ x / y
 -- 1
 envoyerMessage :: SmartMail -> Message -> SmartMail
 envoyerMessage sm msg
-                  | envelopMsgSpam || contentMsgSpam  = sendMsgAsSpamToMultiplRicipient trame' msg' (addMsgToSender msg sm) ricipients
-                  | otherwise = sendMsgAsLegitToMultiplRicipient trame' msg' (addMsgToSender msg sm) ricipients
+                  | envelopMsgSpam || contentMsgSpam  = sendMsgAsSpamToMultiplRicipient trame' msg' (addMsgToSender msg sm) ricipients reason
+                  | otherwise = sendMsgAsLegitToMultiplRicipient trame' msg' (addMsgToSender msg sm) ricipients reason
                   where envelopMsgSpam = getTypeMessage verifyEnvelop == Spam
                         contentMsgSpam = getTypeMessage verifyContent == Spam
                         verifyEnvelop = filtrageEnveloppe trame' sm  sender
@@ -326,12 +328,18 @@ envoyerMessage sm msg
                         sender = emetteur trame'
                         msg' = checkRecipients msg sm
                         ricipients = emailRecepteurs msg' ++ emailCC msg' ++ emailCCi msg'
+                        reason = getReason verifyEnvelop verifyContent
 
 getTrame :: Message -> Trame
 getTrame msg = buildTrame msg enteteFromMsg msgContenu
 
 getTypeMessage :: (TypeMessage, Trame, Explications) -> TypeMessage
 getTypeMessage (t, _, _) = t
+
+getReason :: (TypeMessage, Trame, Explications) -> (TypeMessage, Trame, Explications) -> Explications
+getReason (_, _, e1) (_, _, e2)
+                              | e1 == "" = e2
+                              | otherwise = e1
 
 addMsgToSender :: Message -> SmartMail -> SmartMail
 addMsgToSender msg sm =  Map.insert sender newCSmail sm
@@ -355,32 +363,49 @@ addMsgToSender msg sm =  Map.insert sender newCSmail sm
 -- [Courriel] est la liste des receveurs à l'exception de ceux qui n'ont pas un CompteSmail
 -- SmartMail est compte obtenu apres l'envoi de message
 
-sendMsgAsSpamToMultiplRicipient :: Trame -> Message -> SmartMail -> [Courriel] -> SmartMail
-sendMsgAsSpamToMultiplRicipient t msg sm [] = sm
-sendMsgAsSpamToMultiplRicipient t msg sm (x:xs)
-                                       | x `notElem` courriels = sendMsgAsSpamToMultiplRicipient t msg sm xs
+sendMsgAsSpamToMultiplRicipient :: Trame -> Message -> SmartMail -> [Courriel] -> Explications -> SmartMail
+sendMsgAsSpamToMultiplRicipient t msg sm [] e = sm
+sendMsgAsSpamToMultiplRicipient t msg sm (x:xs) e
+                                       | x `notElem` courriels = sendMsgAsSpamToMultiplRicipient t msg sm xs e
                                        | otherwise = Map.insert x newCsmail sm
                                        where courriels = courrielsComptes sm
                                              oldCsmail = obtenirCompte x sm
-                                             spams' = (t, " "): spams oldCsmail
+                                             spams' = (t, e): spams oldCsmail
                                              newCsmail = buildCpSmail' spams' oldCsmail
 
 
-sendMsgAsLegitToMultiplRicipient :: Trame -> Message -> SmartMail -> [Courriel] -> SmartMail
-sendMsgAsLegitToMultiplRicipient t msg sm [] = sm
-sendMsgAsLegitToMultiplRicipient t msg sm (x:xs)
-                                       | x `notElem` courriels = sendMsgAsLegitToMultiplRicipient t msg sm xs
-                                       | otherwise = Map.insert x newCsmail sm
-                                       where courriels = courrielsComptes sm
-                                             oldCsmail = obtenirCompte x sm
-                                             reception' = t: reception oldCsmail
-                                             newCsmail = buildCpSmail'' reception' oldCsmail
+sendMsgAsLegitToMultiplRicipient :: Trame -> Message -> SmartMail -> [Courriel] -> Explications -> SmartMail
+sendMsgAsLegitToMultiplRicipient t msg sm [] e = sm
+sendMsgAsLegitToMultiplRicipient t msg sm (x:xs) e
+                                       | x `notElem` courrielsComptes sm = sendMsgAsLegitToMultiplRicipient t msg sm xs e
+                                       | otherwise = insertAsSpamOrReception x t sm
 
--- buildCpSmail''' :: a  -> CompteSmail -> String -> CompteSmail
--- buildCpSmail''' o cs s = case s of "envoi" -> CompteSmail (personne cs) (reception cs) o (spams cs) (preferences cs) (contacts cs)
---                                    "spams" -> CompteSmail (personne cs) (reception cs) (envoi cs) o (preferences cs) (contacts cs)
---                                    "receptions" -> CompteSmail (personne cs) o (envoi cs) (spams cs) (preferences cs) (contacts cs)
---                                    null -> cs
+
+insertAsSpamOrReception :: Courriel -> Trame -> SmartMail -> SmartMail
+insertAsSpamOrReception c t sm
+                             | isSenderBlocked c t sm = Map.insert c editSpams sm
+                             | otherwise = Map.insert c editReception sm
+                             where courriels = courrielsComptes sm
+                                   oldCsmail = obtenirCompte c sm
+                                   reception' = t: reception oldCsmail
+                                   spams' = (t, "contact bloque"): spams oldCsmail
+                                   editReception = buildCpSmail'' reception' oldCsmail
+                                   editSpams = buildCpSmail' spams' oldCsmail
+
+-- isSenderBlockedByReceiver :: Courriel -> Courriel -> SmartMail -> Bool
+-- isSenderBlockedByReceiver s r sm
+--                                | s `notElem` allEmails = False
+--                                | otherwise = foldl (\acc c -> ((courriel (fst c) == s) && (snd c == Noir)) || acc ) False allContacts
+--                                where allEmails = map courriel allPersons
+--                                      allPersons = map fst allContacts
+--                                      allContacts = contacts ( obtenirCompte r sm )
+
+
+-- buildCpSmail :: (Reception a || Envoi a || Spams a) => a -> CompteSmail -> String -> CompteSmail
+-- buildCpSmail o cs s = case s of "envoi" -> CompteSmail (personne cs) (reception cs) o (spams cs) (preferences cs) (contacts cs)
+--                                 "spams" -> CompteSmail (personne cs) (reception cs) (envoi cs) o (preferences cs) (contacts cs)
+--                                 "receptions" -> CompteSmail (personne cs) o (envoi cs) (spams cs) (preferences cs) (contacts cs)
+--                                 null -> cs
 
 buildCpSmail :: Envoi -> CompteSmail -> CompteSmail
 buildCpSmail e cs = CompteSmail (personne cs) (reception cs) e (spams cs) (preferences cs) (contacts cs)
@@ -400,7 +425,6 @@ allRecipients :: Message -> [Personne]
 allRecipients msg = msgRecepteurs msg ++ msgCC msg ++ msgCCi msg
 
 
-isSenderBlocked :: Courriel -> Courriel -> CompteSmail -> Bool
 -------------------------------------------------------------------
 --------------------   STATISTIQUES ET AFFICHAGES   ---------------   
 -------------------------------------------------------------------
@@ -458,7 +482,9 @@ statSpamsEnvoyes = error " à compléter"
 -- >>> length $ spams $ obtenirCompte "tato.ange@smail.ca"  s
 -- 8
 envoyerMessage_Plusieurstrames :: SmartMail -> [Trame] -> SmartMail
-envoyerMessage_Plusieurstrames = error " à compléter"
+--envoyerMessage_Plusieurstrames = error " à compléter"
+envoyerMessage_Plusieurstrames sm [] = sm
+envoyerMessage_Plusieurstrames sm xs = foldl (\acc x -> envoyerMessage acc (getMsgFromTrame x)) sm xs 
 
 
 -- | Extraire les n premiers messages  de chacune des 3  boîtes : Reception, Envoi, Spams de chaque compte du SmartMail

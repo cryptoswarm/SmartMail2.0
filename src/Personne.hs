@@ -5,8 +5,8 @@ module Personne where
 
 import Data.Maybe (fromJust)
 import Data.List (elemIndex)
---import Text.Regex.Posix
 import Data.Char
+import Data.List.Split
 
 type Nom = String
 type Prenom = String
@@ -19,7 +19,7 @@ data Personne = Personne
 instance Eq Personne where
     (==) (Personne cour1 _ ) (Personne cour2 _ ) = cour1 == cour2
 
--- | Retourne lle courriel d'une personne
+-- | Retourne le courriel d'une personne
 courriel :: Personne -> String
 courriel (Personne c _)= c
 
@@ -35,52 +35,16 @@ courriel (Personne c _)= c
 -- False
 -- >>> map courrielValide ["tatoooange@smail.ca", "ange.tato@smail.ca", "ange_tato@smail.ca", "Tato@smail.ca"]
 -- [True,True,True,False]
+
 courrielValide :: [Char] -> Bool
 courrielValide xs
                 | '@' `notElem`  xs = False
-                | domain /= "@smail.ca" = False
-                | not( checkName name ) = False 
+                | not(checkName' xs) = False 
                 | otherwise = True
-                where (name, domain) = splitByIndex '@' xs
 
-
-
-getIndexOf:: Eq a => a -> [a] -> Int
-getIndexOf x xs = fromJust $ elemIndex x xs
-
-splitByIndex:: Eq a =>  a -> [a]-> ([a], [a])
-splitByIndex x xs = splitAt (getIndexOf x xs) xs
-
-
-getDigits :: [Char] -> [Char ]
-getDigits [] = []
-getDigits xs = filter isDigit xs
-
--- Get caracters from name except allowed caracters which are in list ['_', '-',]
-getCaracters:: [Char ] -> [Char ]
-getCaracters [] = []
-getCaracters (x:xs)
-    | isDigit x =  getCaracters xs
-    | x == '-' || x == '_' || x == '.' = getCaracters xs
-    | otherwise = x : getCaracters xs
-
-
-checkName:: [Char] -> Bool
-checkName [] = False
-checkName xs 
-    | False `elem` map isAsciiLower caracters = False 
-    | otherwise = True 
-    where caracters = getCaracters xs
-
-
-person = Personne "email@smail.ca" ("mokhtar", "safir")
-
-
-
-
-
--- function :: String -> String
--- function arg
---   | arg =~ "pattern1" = "1"
---   | arg =~ "pattern2" = "2"
---   | otherwise = "3"
+checkName' :: [Char] -> Bool
+checkName' [] = False
+checkName' xs = foldl (\acc x -> (x `elem` accepted || isAsciiLower x ||  isDigit x) && acc ) True (head content) &&  lengthAndDomain
+            where content = splitOn "@" xs
+                  accepted = ['-','_', '.' ]
+                  lengthAndDomain =  length content == 2 && last content == "smail.ca"
