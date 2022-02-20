@@ -1,4 +1,4 @@
-module SmartMail where 
+module SmartMail where
 
 import qualified Data.Map as Map
 import Data.Maybe
@@ -8,6 +8,8 @@ import Personne
 import Trame
 import CompteSmail
 import System.Directory
+import Data.List.Split
+
 
 type SmartMail = Map.Map Courriel CompteSmail -- Dictionnaire de comptes smail
 first_third (f,_,t) = (f,t) -- Petite fonction utilisée dans les tests
@@ -16,8 +18,8 @@ first_third (f,_,t) = (f,t) -- Petite fonction utilisée dans les tests
 --
 -- >>> nombreCompteSmail emptySmartMail
 -- 0
-emptySmartMail :: SmartMail 
-emptySmartMail = error " à compléter"
+emptySmartMail :: SmartMail
+emptySmartMail = Map.fromList []
 
 
 -- | Ajout d'un compteSmail 
@@ -28,14 +30,18 @@ emptySmartMail = error " à compléter"
 -- >>> courrielsComptes s1
 -- ["nkambou.roger@smail.ca","tato.ange@smail.ca"]
 ajoutCompte :: CompteSmail -> SmartMail-> SmartMail
-ajoutCompte = error " à compléter"
+--ajoutCompte _ dict = error "Vous devez fournir un compteSmail"
+ajoutCompte compte dict
+                      | Map.member ( courriel ( personne compte ) ) dict = dict
+                      | otherwise = Map.insert (courriel ( personne compte )) compte dict
 
 -- | Ajout de plusieurs comptes Smail 
 --
 -- >>> courrielsComptes $ ajoutComptes [csmail1, csmail2] emptySmartMail
 -- ["nkambou.roger@smail.ca","tato.ange@smail.ca"]
-ajoutComptes::  [CompteSmail] -> SmartMail -> SmartMail 
-ajoutComptes = error " à compléter"
+ajoutComptes::  [CompteSmail] -> SmartMail -> SmartMail
+-- ajoutComptes xs sMail = foldl (flip ajoutCompte) sMail xs
+ajoutComptes xs sMail = foldl (\sMail x  -> ajoutCompte x sMail) sMail xs
 
 -- | Affiche tous les courriels de comptes Smail
 --
@@ -45,7 +51,7 @@ ajoutComptes = error " à compléter"
 -- >>>courrielsComptes emptySmartMail
 -- []
 courrielsComptes ::SmartMail-> [Courriel]
-courrielsComptes = error " à compléter"
+courrielsComptes = Map.keys
 
 -- | Retourne nombre de CompteSmail contenu dans SmartMail
 --
@@ -55,7 +61,7 @@ courrielsComptes = error " à compléter"
 -- >>> nombreCompteSmail emptySmartMail
 -- 0
 nombreCompteSmail :: SmartMail -> Int
-nombreCompteSmail = error " à compléter"
+nombreCompteSmail = Map.size
 
 -- | Retoune le comptre Smail associé à un courriel dans SmartMail
 -- Note : On suppose que le courriel passé en argumemnt est associé à un compte existant du smartmail
@@ -68,13 +74,20 @@ nombreCompteSmail = error " à compléter"
 -- Spams = [],
 -- Contacts = [("nkambou.roger@smail.ca",Blanc),("noel.alice@smail.ca",Noir)]
 obtenirCompte :: Courriel -> SmartMail -> CompteSmail
-obtenirCompte = error " à compléter"
+obtenirCompte c sMail = fromJust $ Map.lookup c sMail
+
 
 -- | Déterminer la priorité d'un message non spam, pour chacune des personnes dans les listes receveurs, cc et cci
 -- Note: on suppose que le message est un message non spam.
--- Cette fonction retourne une liste de priorité correspondant à chacun des receveurs, les personnes en Cc et en Cci.
---    (1) Important= expediteur est un contact direct (est dans la liste de contacts du recepteur) qui n'est pas bloqué ou est "equipesmartmail@smail.ca" 
---    (2) Normal = expediteur est de niveau 2 (est dans la liste de contacts d'au moins un des contacts du recepteur et n'est pas bloqué). Si il est bloqué par au moins un contact, alors il passe au niveau suivant.
+-- Cette fonction retourne une liste de priorité correspondant à chacun des:
+                -- receveurs, 
+                -- les personnes en Cc 
+                -- et en Cci.
+--    (1) Important= expediteur est un contact direct (est dans la liste de contacts du recepteur) 
+                -- qui n'est pas bloqué ou est "equipesmartmail@smail.ca" 
+--    (2) Normal = expediteur est de niveau 2 
+                -- (est dans la liste de contacts d'au moins un des contacts du recepteur et n'est pas bloqué). 
+                -- Si il est bloqué par au moins un contact, alors il passe au niveau suivant.
 --    (3) Faible = expediteur n'est ni un contact direct, n'est ni de niveau 2, n'est ni l'équipe smartMail.ca
 --
 -- >>> s1 = ajoutCompte csmail0 $ ajoutCompte csmail6 $ ajoutCompte csmail5 $ ajoutCompte csmail4 $ ajoutCompte csmail2 $ ajoutCompte csmail1 emptySmartMail
@@ -85,9 +98,32 @@ obtenirCompte = error " à compléter"
 -- >>> prioritesMessage s1 (courriel pers2, map courriel [pers5, pers2], map courriel [pers4], map courriel [pers9, pers0, pers4 ], "Cool", "Allo Alex, mon premier message :).")
 -- [[Normal,Faible],[Normal],[Faible,Faible,Normal]]
 prioritesMessage :: SmartMail -> Message -> [[Priorite]]
-prioritesMessage = error " à compléter"
+prioritesMessage sMail (c, r, ccs, ccis, _, _)
+               | c == "equipesmartmail@smail.ca" = [replicate (length r)  Important, replicate (length ccs) Important, replicate (length ccis) Important]
+               | otherwise = [pMsgRecp c sMail r, pMsgRecp c sMail ccs, pMsgRecp c sMail ccis]
 
 
+pMsgRecp :: Courriel ->  SmartMail -> [Courriel] -> [Priorite]
+pMsgRecp sender sm [] = []
+pMsgRecp sender sm (x:xs)
+                        | isLevelOne sender (contacts $ fromJust $ Map.lookup x sm) = Important : pMsgRecp sender sm xs
+                        | isLevelTwo sender (contacts $ fromJust $ Map.lookup x sm) sm = Normal : pMsgRecp sender sm xs
+                        | otherwise = Faible : pMsgRecp sender sm xs
+
+
+isLevelOne :: Courriel ->  [Contact] -> Bool
+isLevelOne c [] = False
+isLevelOne c xs = foldl (\acc x -> if (courriel (fst x ) == c && snd x == Blanc) then True else acc) False xs
+
+
+isLevelTwo :: Courriel -> [Contact] -> SmartMail  -> Bool
+isLevelTwo c [] sm = False
+isLevelTwo c xs sm = foldl (\acc x -> if isLevelOne c  (getContacts x sm ) then True else acc) False xs
+
+
+
+getContacts :: Contact -> SmartMail -> [Contact]
+getContacts x sm = contacts $ fromJust $ Map.lookup (courriel (fst x )) sm
 
 -------------------------------------------------------------------
 ---------- FILTRES ANTI SPAM ET ANTI HAMEÇONNAGE ------------------ 
@@ -100,8 +136,9 @@ prioritesMessage = error " à compléter"
 --      (3) l'objet contient au moins 2 points d'interrogation "?" (Explications = "classique_enveloppe")
 --      (4) l'objet est vide (Explications = "objet vide")
 --      (5) l'objet contient le caractère "$" (Explications = "classique_enveloppe")
---      (6) l'emetteur a été bloqué (Etat = Noir) par le destinataire   (Explications = "contact bloque")  
--- Le courriel passé en paramètre à cette fonction servira pour le point (6). Le filtre est fait par rapport à la personne ayant le courriel passé en paramètre.
+--      (6) l'emetteur a été bloqué (Etat = Noir) par le destinataire (Explications = "contact bloque")  
+-- Le courriel passé en paramètre à cette fonction servira pour le point (6).
+-- Le filtre est fait par rapport à la personne ayant le courriel passé en paramètre.
 --
 -- >>> ssm2 = Map.fromList [("nkambou.roger@smail.ca", CompteSmail (Personne "nkambou.roger@smail.ca" ("roger","nkambou")) [Trame (Entete (Date 2019 10 2) "Bienvenue" pers0 [pers1] [] []) "Bienvenue dans votre boite smartMail !"] [] [] [] []),("robert.julien@smail.ca",CompteSmail (Personne "robert.julien@smail.ca" ("julien","robert")) [] [] [] [] [(Personne "tato.ange@smail.ca" ("",""),Noir)]),("tato.ange@smail.ca", CompteSmail (Personne "tato.ange@smail.ca" ("ange","tato")) [Trame (Entete (Date 2019 10 2) "Bienvenue" pers0 [pers1] [] []) "Bienvenue dans votre boite smartMail !"] [] [] [] [])]
 -- >>> filtrageEnveloppe trame6 ssm2 "robert.julien@smail.ca"
@@ -126,9 +163,38 @@ prioritesMessage = error " à compléter"
 -- >>> filtrageEnveloppe trame17 s1 "adam.ronelle@smail.ca"
 -- (NonSpam,Trame (Entete (Date 2022 2 14) "Je suis le prince de Namek" (Personne "satan.peticoeur@smail.ca" ("Satan","Peticoeur")) [Personne "tato.ange@smail.ca" ("ange","tato")] [Personne "adam.ronelle@smail.ca" ("Adam","Ronelle")] [Personne "gabrielle.joyce@smail.ca" ("Gabrielle","Joyce"),Personne "marsu.pilami@smail.ca" ("Marsu","Pilami")]) "Je suis satan petit coeur et je viens de la planete Namek.","")
 
-filtrageEnveloppe :: Trame -> SmartMail -> Courriel -> (TypeMessage, Trame, Explications) 
-filtrageEnveloppe = error " à compléter"
+filtrageEnveloppe :: Trame -> SmartMail -> Courriel -> (TypeMessage, Trame, Explications)
+filtrageEnveloppe t sm c
+                       | isObjectUpper t || length (charInObject '!' t) >= 2 || length (charInObject '?' t) >= 2 || not (null (charInObject '$' t))  = (Spam, t, "classique_enveloppe")
+                       | null ( objet t) = (Spam, t, "objet vide")
+                       | isSenderBlocked c t sm = (Spam, t, "contact bloque")
+                       | otherwise = (NonSpam , t, "")
 
+isObjectUpper :: Trame -> Bool
+isObjectUpper t = foldl (\acc x -> if x && acc then acc else False ) True  (isUpper' (objet t))
+
+
+-- 2 times of ! 2 times of ?  1 of $
+isUpper' :: [Char] -> [Bool]
+isUpper' [] = []
+isUpper' (x:xs)
+              | not (isLetter x) = isUpper' xs
+              | otherwise = isUpper x : isUpper' xs
+
+charInObject :: Char -> Trame -> [Bool]
+charInObject char t = filter (\x -> x == True) (map (\x -> x == char ) (objet t))
+
+-- | Trouver si le destinataire a bloqué l'émeteur
+-- Courriel est le courriel du receveur
+isSenderBlocked :: Courriel -> Trame -> SmartMail -> Bool
+isSenderBlocked c t sm = isSenderBlocked' (emetteur t) (contacts (obtenirCompte c sm ))
+
+isSenderBlocked' :: Courriel -> [Contact] -> Bool
+isSenderBlocked' c [] = False
+isSenderBlocked' c (x:xs)
+                        | (courriel (fst x) == c)  && (snd x == Noir) = True
+                        | otherwise = isSenderBlocked' c xs
+-- isUpper' (x:xs) = if (isLetter x && isUpper x )then False else True  : isUpper' xs
 
 -- | Filtrage du contenu
 -- Les filtres de contenu analysent le contenu des messages et détectent les spams qui ont réussi à passer à travers le filtre d'enveloppe.
@@ -154,15 +220,69 @@ filtrageEnveloppe = error " à compléter"
 -- (Spam,"classique_contenu, 100% de mots comportant des caracteres etranges.")
 -- >>> first_third $ filtrageContenu trame11
 -- (Spam,"classique_contenu, 100% de mots comportant des caracteres etranges.")
-filtrageContenu :: Trame -> (TypeMessage, Trame, Explications)
-filtrageContenu = error " à compléter"
 
+hamconageKeyWords = ["sexe", "sexy", "viagra", "argent", "drogue", "money","credit", "$","chaud", "nu", "click", "amateur", "pics","videos", "gagner","lotterie","heritage"]
+pubKeyWords = ["offre", "commande", "click", "videos","gratuit","publicite", "special","voyage"]
+charSpeciaux = ['|','0'..'9']
+
+filtrageContenu :: Trame -> (TypeMessage, Trame, Explications)
+filtrageContenu t
+                | hams >= 10 = (Spam, t, "hameconnage, "++ show hams ++ "% de mots suspects.")
+                | pups >= 10 = (Spam, t, "publicitaire, "++ show pups ++ "% de mots suspects.")
+                | specialChar >= 10 = (Spam, t, "classique_contenu, "++ show specialChar ++ "% de mots comportant des caracteres etranges.")
+                | otherwise = (NonSpam  , t, "")
+                where hams = filtreSpecifique hamconageKeyWords $ contenu t
+                      pups = filtreSpecifique pubKeyWords $ contenu t
+                      specialChar = filtreCaracteresSpeciaux (words $ contenu t) ['|', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
+
+
+filtreSpecifique :: [[Char]] -> [Char] -> Int
+filtreSpecifique _ [] = 0
+filtreSpecifique [] _ = 0
+filtreSpecifique xs ys =  calculateOrder  wordsIn  allWords
+                         where wordsIn = toRational $ length (isWordInMsg xs ys) * 100
+                               allWords = toRational $ length $ words ys
+
+isWordInMsg :: [[Char]] -> [Char] -> [Bool]
+isWordInMsg _ [] = []
+isWordInMsg [] _ = []
+isWordInMsg  (x:xs) ys
+                     | x `elem` words ys = True : isWordInMsg xs ys
+                     | otherwise = isWordInMsg xs ys
+
+filtreCaracteresSpeciaux :: [[Char]] -> [Char] -> Int
+filtreCaracteresSpeciaux [] _ = 0
+filtreCaracteresSpeciaux _ [] = 0
+filtreCaracteresSpeciaux xs ys = calculateOrder foldSChars  nbrWords
+                               where foldSChars = toRational $ exp * 100
+                                     exp = foldl (\acc x -> if wordContainsChar x ys then acc + 1 else acc ) 0 xs
+                                     nbrWords = toRational $ length xs
+
+wordContainsChar :: [Char] -> [Char] -> Bool
+wordContainsChar _ [] = False
+wordContainsChar xs (y:ys) = y `elem` xs ||  wordContainsChar xs ys
+
+
+calculateOrder :: (RealFrac a, Integral b) => a -> a -> b
+calculateOrder x y = round  $ x / y
 
 -- | Envoyer message
--- Remarque 1: Il faut vérifier l'enveloppe de la trame ainsi que son contenu. Si c'est un spam, l'ajouter dans la boîte de spams et non de reception.
--- Remarque 2: Il peut avoir plusieurs receveurs principaux, plusieurs personnes en Cc et plusieurs personnes en Cci. Les receveurs et les personnes en Cc ne doivent pas voir les personnes en Cci. Les personnes en cci ne doivent pas voir les autres personnes en cci.
--- Remarque 3: On suppose que celui qui envoi a un compte dans SmartMail. Si un receveur n'a pas de compte SmartMail, il faut simplement l'ignorer.
--- Remarque 4: Les dates dans les messages sont les dates d'envoi de messages. Il faudra mettre la date courante dans l'entête de la Trame. Vous pouvez modifier les dates des messages dans les tests pour faire vos tests. Lors de la correction, ca sera la date courante qui sera pris en compte. Exemple: Si je corrige le 10 mars 2022 alors c'est cette date qui devra être dans l'entête des messages envoyés. 
+-- Remarque 1: Il faut vérifier l'enveloppe de la trame ainsi que son contenu. Si c'est un spam, 
+            -- l'ajouter dans la boîte de spams et non de reception.
+-- Remarque 2: 
+            -- Il peut avoir plusieurs receveurs principaux,
+            -- plusieurs personnes en Cc et plusieurs personnes en Cci. 
+            -- Les receveurs et les personnes en Cc ne doivent pas voir les personnes en Cci. 
+            -- Les personnes en cci ne doivent pas voir les autres personnes en cci.
+-- Remarque 3: On suppose que celui qui envoi a un compte dans SmartMail. 
+            -- Si un receveur n'a pas de compte SmartMail, il faut simplement l'ignorer.
+-- Remarque 4: Les dates dans les messages sont les dates d'envoi de messages. 
+            -- Il faudra mettre la date courante dans l'entête de la Trame.
+            -- Vous pouvez modifier les dates des messages dans les tests pour faire vos tests. 
+            -- Lors de la correction, ca sera la date courante qui sera pris en compte. 
+            -- Exemple: 
+                  -- Si je corrige le 10 mars 2022 
+                  -- alors c'est cette date qui devra être dans l'entête des messages envoyés. 
 -- 
 -- >>> s1 = ajoutCompte csmail2 $ ajoutCompte csmail1 $ ajoutCompte csmail0 emptySmartMail
 -- >>> s2 = envoyerMessage  s1 ("equipesmartmail@smail.ca", ["tato.ange@smail.ca"],[],[], "Bi!en! venue!", "Bienvenue dans votre boite smartMail !")
@@ -197,7 +317,112 @@ filtrageContenu = error " à compléter"
 -- >>> length (envoi $ obtenirCompte "satan.peticoeur@smail.ca" s6)
 -- 1
 envoyerMessage :: SmartMail -> Message -> SmartMail
-envoyerMessage = error " à compléter"
+envoyerMessage sm msg
+                  | envelopMsgSpam || contentMsgSpam  = sendMsgAsSpamToMultiplRicipient trame' msg' (addMsgToSender msg sm) ricipients reason
+                  | otherwise = sendMsgAsLegitToMultiplRicipient trame' msg' (addMsgToSender msg sm) ricipients reason
+                  where envelopMsgSpam = getTypeMessage verifyEnvelop == Spam
+                        contentMsgSpam = getTypeMessage verifyContent == Spam
+                        verifyEnvelop = filtrageEnveloppe trame' sm  sender
+                        verifyContent = filtrageContenu trame'
+                        trame' = getTrame msg
+                        sender = emetteur trame'
+                        msg' = checkRecipients msg sm
+                        ricipients = emailRecepteurs msg' ++ emailCC msg' ++ emailCCi msg'
+                        reason = getReason verifyEnvelop verifyContent
+
+getTrame :: Message -> Trame
+getTrame msg = buildTrame msg enteteFromMsg msgContenu
+
+getTypeMessage :: (TypeMessage, Trame, Explications) -> TypeMessage
+getTypeMessage (t, _, _) = t
+
+getReason :: (TypeMessage, Trame, Explications) -> (TypeMessage, Trame, Explications) -> Explications
+getReason (_, _, e1) (_, _, e2)
+                              | e1 == "" = e2
+                              | otherwise = e1
+
+addMsgToSender :: Message -> SmartMail -> SmartMail
+addMsgToSender msg sm =  Map.insert sender newCSmail sm
+                    where sender = emailEmetter msg
+                          account = obtenirCompte sender sm
+                          listEnvoi = envoi account
+                          newTrame = getTrame msg
+                          newCSmail = buildCpSmail (newTrame : listEnvoi) account
+
+-- sendMsgAsSpamToMultiplRicipient :: Trame -> Message -> SmartMail -> SmartMail
+-- sendMsgAsSpamToMultiplRicipient t msg sm = foldl (\acc x -> Map.insert x (buildCpSmail' ( spam' : spams $ obtenirCompte x sm sm) ) sm ricipientList
+--                                        where ricipientList = emailRecepteurs msg
+--                                              spam' = (t,"")
+
+-- | Envoyer un msg comme etant spam a plusieurs receveurs
+-- Les receveurs sont seulement ceux qui ont un compte smail
+-- Le contenu ou l'enveloppe du message en entrée ont detrminé que le message est un spam
+-- Trame est la trame à envoyée
+-- Message est le message extrait de la trame
+-- SmartMail est le compte smartMail
+-- [Courriel] est la liste des receveurs à l'exception de ceux qui n'ont pas un CompteSmail
+-- SmartMail est compte obtenu apres l'envoi de message
+
+sendMsgAsSpamToMultiplRicipient :: Trame -> Message -> SmartMail -> [Courriel] -> Explications -> SmartMail
+sendMsgAsSpamToMultiplRicipient t msg sm [] e = sm
+sendMsgAsSpamToMultiplRicipient t msg sm (x:xs) e
+                                       | x `notElem` courriels = sendMsgAsSpamToMultiplRicipient t msg sm xs e
+                                       | otherwise = Map.insert x newCsmail sm
+                                       where courriels = courrielsComptes sm
+                                             oldCsmail = obtenirCompte x sm
+                                             spams' = (t, e): spams oldCsmail
+                                             newCsmail = buildCpSmail' spams' oldCsmail
+
+
+sendMsgAsLegitToMultiplRicipient :: Trame -> Message -> SmartMail -> [Courriel] -> Explications -> SmartMail
+sendMsgAsLegitToMultiplRicipient t msg sm [] e = sm
+sendMsgAsLegitToMultiplRicipient t msg sm (x:xs) e
+                                       | x `notElem` courrielsComptes sm = sendMsgAsLegitToMultiplRicipient t msg sm xs e
+                                       | otherwise = insertAsSpamOrReception x t sm
+
+
+insertAsSpamOrReception :: Courriel -> Trame -> SmartMail -> SmartMail
+insertAsSpamOrReception c t sm
+                             | isSenderBlocked c t sm = Map.insert c editSpams sm
+                             | otherwise = Map.insert c editReception sm
+                             where courriels = courrielsComptes sm
+                                   oldCsmail = obtenirCompte c sm
+                                   reception' = t: reception oldCsmail
+                                   spams' = (t, "contact bloque"): spams oldCsmail
+                                   editReception = buildCpSmail'' reception' oldCsmail
+                                   editSpams = buildCpSmail' spams' oldCsmail
+
+-- isSenderBlockedByReceiver :: Courriel -> Courriel -> SmartMail -> Bool
+-- isSenderBlockedByReceiver s r sm
+--                                | s `notElem` allEmails = False
+--                                | otherwise = foldl (\acc c -> ((courriel (fst c) == s) && (snd c == Noir)) || acc ) False allContacts
+--                                where allEmails = map courriel allPersons
+--                                      allPersons = map fst allContacts
+--                                      allContacts = contacts ( obtenirCompte r sm )
+
+
+-- buildCpSmail :: (Reception a || Envoi a || Spams a) => a -> CompteSmail -> String -> CompteSmail
+-- buildCpSmail o cs s = case s of "envoi" -> CompteSmail (personne cs) (reception cs) o (spams cs) (preferences cs) (contacts cs)
+--                                 "spams" -> CompteSmail (personne cs) (reception cs) (envoi cs) o (preferences cs) (contacts cs)
+--                                 "receptions" -> CompteSmail (personne cs) o (envoi cs) (spams cs) (preferences cs) (contacts cs)
+--                                 null -> cs
+
+buildCpSmail :: Envoi -> CompteSmail -> CompteSmail
+buildCpSmail e cs = CompteSmail (personne cs) (reception cs) e (spams cs) (preferences cs) (contacts cs)
+
+buildCpSmail' :: Spams -> CompteSmail -> CompteSmail
+buildCpSmail' s cs = CompteSmail (personne cs) (reception cs) (envoi cs) s (preferences cs) (contacts cs)
+
+buildCpSmail'' :: Reception  -> CompteSmail -> CompteSmail
+buildCpSmail'' r cs = CompteSmail (personne cs) r (envoi cs) (spams cs) (preferences cs) (contacts cs)
+
+checkRecipients :: Message -> SmartMail -> Message
+checkRecipients msg sm = ( emailEmetter msg, recipients, emailCC msg, emailCCi msg, emailObj msg, emailContenu msg )
+                     --where recipients = foldl (\acc x -> if isNothing (Map.lookup (courriel x) sm) then acc else courriel x:acc ) [] (msgRecepteurs msg)
+                    where recipients = foldl (\acc x -> if isNothing (Map.lookup (courriel x) sm) then acc else courriel x:acc ) [] (allRecipients msg)
+
+allRecipients :: Message -> [Personne]
+allRecipients msg = msgRecepteurs msg ++ msgCC msg ++ msgCCi msg
 
 
 -------------------------------------------------------------------
@@ -257,7 +482,9 @@ statSpamsEnvoyes = error " à compléter"
 -- >>> length $ spams $ obtenirCompte "tato.ange@smail.ca"  s
 -- 8
 envoyerMessage_Plusieurstrames :: SmartMail -> [Trame] -> SmartMail
-envoyerMessage_Plusieurstrames = error " à compléter"
+--envoyerMessage_Plusieurstrames = error " à compléter"
+envoyerMessage_Plusieurstrames sm [] = sm
+envoyerMessage_Plusieurstrames sm xs = foldl (\acc x -> envoyerMessage acc (getMsgFromTrame x)) sm xs 
 
 
 -- | Extraire les n premiers messages  de chacune des 3  boîtes : Reception, Envoi, Spams de chaque compte du SmartMail
