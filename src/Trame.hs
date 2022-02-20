@@ -15,7 +15,7 @@ import Personne
 import Data.Time.Clock
 import Data.Time.Calendar
 import System.IO.Unsafe
-import Language.Haskell.TH (Callconv(Prim))
+import Language.Haskell.TH (Callconv(Prim), nameBase)
 
 data TypeMessage = Spam | NonSpam deriving (Show, Eq, Read)
 type Annee = Integer
@@ -86,16 +86,16 @@ contenu (Trame _ c ) = c
 
 -- Message = (Courriel, [Courriel],[Courriel],[Courriel], Objet, Contenu)
 msgEmetter :: Message -> Personne
-msgEmetter (c, _, _, _, _, _) = Personne c ("", "")
+msgEmetter (c, _, _, _, _, _) = Personne c (firstLastName c)
 
 msgRecepteurs :: Message -> [Personne]
-msgRecepteurs (_, r, _, _, _, _) = map (\x -> Personne x  ("", "")) r
+msgRecepteurs (_, r, _, _, _, _) = map (\x -> Personne x  (firstLastName x)) r
 
 msgCC :: Message -> [Personne ]
-msgCC (_, _, cc, _, _, _) = map (\x -> Personne x  ("", "")) cc
+msgCC (_, _, cc, _, _, _) = map (\x -> Personne x  (firstLastName x)) cc
 
 msgCCi :: Message -> [Personne ]
-msgCCi (_, _, _, cci, _, _) = map (\x -> Personne x  ("", "")) cci
+msgCCi (_, _, _, cci, _, _) = map (\x -> Personne x  (firstLastName x)) cci
 
 msgObj :: Message -> Objet
 msgObj (_, _, _, _, o, _) = o
@@ -105,7 +105,7 @@ msgContenu (_, _, _, _, _, cn) = cn
 
 
 
-emailEmetter :: Message -> Courriel 
+emailEmetter :: Message -> Courriel
 emailEmetter (c, _, _, _, _, _) = c
 
 emailRecepteurs :: Message -> [Courriel]
@@ -125,3 +125,20 @@ emailContenu (_, _, _, _, _, cn) = cn
 
 getMsgFromTrame :: Trame -> Message
 getMsgFromTrame t = (emetteur t, receveurs t, receveurCc t, receveurCci t, objet t, contenu t)
+
+
+firstLastName :: Courriel -> Signature
+firstLastName "" = ("", "")
+firstLastName c = (first, last)
+                  where first = firstName n
+                        last = lastName n
+                        n = takeWhile (/='@') c
+
+firstName :: String -> String 
+firstName "" = ""
+firstName xs = if '.' `elem` xs then takeWhile (/='.') xs else ""
+
+
+lastName :: String -> String
+lastName "" = ""
+lastName xs = if '.' `elem` xs then tail $ dropWhile (/='.') xs else ""

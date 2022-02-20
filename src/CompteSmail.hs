@@ -13,7 +13,7 @@ module CompteSmail where
 
 import Personne
 import Trame
-import Data.Maybe (fromJust)
+import Data.Maybe (fromJust, isNothing)
 import Data.List (elemIndex)
 import Data.Char
 
@@ -26,7 +26,7 @@ type Spams = [(Trame, Explications)] -- boîte des spams
 type Preferences = [Trame -> Bool]
 data CompteSmail  = CompteSmail Personne Reception Envoi Spams Preferences [Contact] -- Compte smail 
 -- Vous devez faire du type CompteSmail une instance de la classe Show. Vous devez donc redéfinir la fonction show pour ce type. Voir les exemples pour voir comment l'affichage est gérer
-type OneOf = (Envoi, Spams, Reception)
+-- type OneOf = (Envoi, Spams, Reception)
 
 listeContacts [] = []
 listeContacts ((p,e):xs) = (courriel p, e):listeContacts xs
@@ -138,10 +138,8 @@ csmail24 = CompteSmail pers13  [] [] [] [] []
 -- Spams = [],
 -- Contacts = [("robert.julien@smail.ca",Blanc),("tato.ange@smail.ca",Blanc)]
 ajouterContact :: Courriel -> Prenom -> Nom -> CompteSmail -> CompteSmail
---ajouterContact = error " à compléter"
---ajouterContact c p n compte  = if (courriel (personne compte) ) == "" then False  else True 
 ajouterContact c p n cSmail
-                     | trouverContact c ( contacts cSmail ) == Nothing = ajouterContact' c p n cSmail
+                     | isNothing (trouverContact c ( contacts cSmail )) = ajouterContact' c p n cSmail
                      | otherwise = cSmail
 
 -- | Trouver un contact
@@ -183,7 +181,7 @@ ajouterContact' c p n compte = CompteSmail (personne compte)
 -- Contacts = [("robert.julien@smail.ca",Blanc),("bourassa.alex@smail.ca",Noir),("tato.ange@smail.ca",Blanc)]
 
 bloquerContact :: CompteSmail -> Personne -> CompteSmail
-bloquerContact compte p 
+bloquerContact compte p
                       | trouverContact ( courriel p ) ( contacts compte ) == Nothing = compte
                       | otherwise = CompteSmail (personne compte)
                                     (reception compte) (envoi compte) (spams compte)
@@ -196,7 +194,7 @@ splitListContact c xs = splitAt (fromJust $ elemIndex c xs) xs
 
 
 bloquerContact':: ([Contact],[Contact]) -> [Contact]
-bloquerContact' (x, y) = x ++ (fst $ head y,  Noir) : tail y 
+bloquerContact' (x, y) = x ++ (fst $ head y,  Noir) : tail y
 
 
 -- | Supprimer messages de la boîte de reception, d'envoi ou de spams d'un compte en fonction d'un filtre.
@@ -223,24 +221,24 @@ supprimerMessagesAvecFiltre compte boite f
                           | boite == "Envoi" = CompteSmail (personne compte)
                                     (reception compte) (dropWhile f (envoi compte)) (spams compte)
                                     (preferences compte) (contacts compte)
-                                    
+
                           | boite == "Spams" = CompteSmail (personne compte)
                                     (reception compte) (envoi compte) (deleteFromTuple f (spams compte))
                                     (preferences compte) (contacts compte)
-                                    
-                          | otherwise = compte 
-                        
+
+                          | otherwise = compte
+
 deleteFromTuple :: (Trame -> Bool ) -> [(Trame, Explications)] -> Spams
 deleteFromTuple f ((t, e): xs)
-                             | map f [t] == [True] = xs 
+                             | map f [t] == [True] = xs
                              | otherwise = (t, e) :  deleteFromTuple f xs
- 
+
 instance Show CompteSmail where
   show (CompteSmail person  reception send spam prefrences contacts) =
       "CompteSmail" ++ " " ++ show ( courriel person ) ++ ":" ++ "\n"
-      ++ "Recus =" ++ " " ++ show reception ++ "," ++ "\n" 
-      ++ "Envois =" ++ " " ++ show send ++ "," ++ "\n" 
-      ++ "Spams =" ++ " "++  show spam ++ "," ++ "\n" 
+      ++ "Recus =" ++ " " ++ show reception ++ "," ++ "\n"
+      ++ "Envois =" ++ " " ++ show send ++ "," ++ "\n"
+      ++ "Spams =" ++ " "++  show spam ++ "," ++ "\n"
       ++ "Contacts =" ++ " "++ show ( listeContacts contacts )
 
 
