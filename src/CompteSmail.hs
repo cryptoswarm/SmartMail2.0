@@ -1,4 +1,3 @@
-{-# LANGUAGE BlockArguments #-}
 {-|
 Module      : CompteSmail
 Description : Module pour la gestion des comptes de la messagerie SmartMail
@@ -229,6 +228,7 @@ supprimerMessagesAvecFiltre compte boite f
                           | otherwise = compte
 
 deleteFromTuple :: (Trame -> Bool ) -> [(Trame, Explications)] -> Spams
+deleteFromTuple _ [] = []
 deleteFromTuple f ((t, e): xs)
                              | map f [t] == [True] = xs
                              | otherwise = (t, e) :  deleteFromTuple f xs

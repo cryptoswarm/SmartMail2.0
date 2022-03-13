@@ -39,8 +39,8 @@ todayDate = Date (year dateAuj) (month dateAuj) (day dateAuj)
 enteteFromMsg :: Message -> Entete
 enteteFromMsg msg = Entete todayDate  (msgObj msg) (msgEmetter msg) (msgRecepteurs msg) (msgCC msg) (msgCCi msg)
 
-buildTrame :: Message -> (Message -> Entete) -> (Message -> Contenu) -> Trame
-buildTrame msg f1 f2 = Trame (f1 msg)  (f2 msg)
+-- buildTrame :: Message -> (Message -> Entete) -> (Message -> Contenu) -> Trame
+-- buildTrame msg f1 f2 = Trame (f1 msg)  (f2 msg)
 
 year :: (Integer, Int, Int) -> Integer
 year (y, _, _) = y
@@ -129,7 +129,7 @@ getMsgFromTrame t = (emetteur t, receveurs t, receveurCc t, receveurCci t, objet
 
 firstLastName :: Courriel -> Signature
 firstLastName "" = ("", "")
-firstLastName c = (first, last)
+firstLastName c = (first,last)
                   where first = firstName n
                         last = lastName n
                         n = takeWhile (/='@') c
