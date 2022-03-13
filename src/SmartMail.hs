@@ -500,7 +500,10 @@ envoyerMessage_Plusieurstrames sm xs = foldl (\acc x -> envoyerMessage acc (getM
 -- >>> length $ spams $ obtenirCompte "tato.ange@smail.ca" $ extrairenMessages 2 s
 -- 2
 extrairenMessages :: Int -> SmartMail -> SmartMail
-extrairenMessages = error " à compléter"
+extrairenMessages f objet =
+  fmap  (\k -> CompteSmail (personne k) (take f (reception k))
+         (take f (envoi k)) (take f (spams k)) (preferences k)
+         (contacts k)) objet
 
 -- | Supprimer tous les messages (Reception, Envoi, Spam) du système Smartmail datant d'une date antérieure (strictement) à celle spécifiée
 --
