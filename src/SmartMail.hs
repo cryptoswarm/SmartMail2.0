@@ -509,7 +509,7 @@ extrairenMessages f objet =
 --
 -- >>> s1 = ajoutComptes [csmail0, csmail1, csmail2, csmail3, csmail4, csmail5] emptySmartMail
 -- >>> s = envoyerMessage_Plusieurstrames s1 [trame1, trame2,trame2,trame4,trame5,trame6,trame7,trame8,trame9, trame10, trame11, trame12]
--- >>> s3 = supprimerOldMessages (Date 2020 10 01) s
+-- >>> s3 = supprimerOldMessages (Date 2022 03 15) s
 -- >>> nbTotalSpams s
 -- 10
 -- >>> length $ spams $ obtenirCompte "tato.ange@smail.ca" s3
@@ -518,7 +518,17 @@ extrairenMessages f objet =
 -- >>> length $ spams $ obtenirCompte "tato.ange@smail.ca"  s4
 -- 5
 supprimerOldMessages :: Date -> SmartMail-> SmartMail
-supprimerOldMessages = error " à compléter"
+supprimerOldMessages d sm = fmap (\x -> supprimerOldMes d x) sm
+
+supprimerOldMes :: Date -> CompteSmail -> CompteSmail
+supprimerOldMes d cs =
+  let ps = personne cs
+      s = filter (\y -> (date (fst y)) >= d) (spams cs)
+      e = filter (\y -> (date y) >= d) (envoi cs)
+      r = filter (\y -> (date y) >= d) (reception cs)
+      p = preferences cs
+      c = contacts cs
+   in (CompteSmail ps r e s p c)
 
 
 -- | Reformater boîte
